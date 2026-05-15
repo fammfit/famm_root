@@ -1,1 +1,9 @@
 
+{
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "build": "next build"
+  }
+}
