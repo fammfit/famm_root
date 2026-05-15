@@ -6,6 +6,8 @@ import { timeout } from "hono/timeout";
 import { rateLimiter } from "hono/rate-limiter";
 
 import healthRoutes from "./routes/health";
+import webhookRoutes from "./routes/webhooks";
+import paymentRoutes from "./routes/payments";
 import { authMiddleware } from "./middleware/auth";
 import { tenantMiddleware } from "./middleware/tenant";
 
@@ -20,7 +22,7 @@ app.use(
   cors({
     origin: (origin) => {
       const allowed = (process.env["CORS_ORIGINS"] ?? "http://localhost:3000").split(",");
-      return allowed.includes(origin) ? origin : allowed[0] ?? "";
+      return allowed.includes(origin) ? origin : (allowed[0] ?? "");
     },
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -43,8 +45,14 @@ app.use(
 // Routes
 app.route("/api/health", healthRoutes);
 
+// Stripe webhooks: must be outside auth so the raw signature is verified by
+// the Stripe webhook secret rather than by user-side JWT.
+app.route("/api/webhooks", webhookRoutes);
+
 // Protected routes: apply auth + tenant context
 app.use("/api/v1/*", authMiddleware, tenantMiddleware);
+
+app.route("/api/v1/payments", paymentRoutes);
 
 // 404 handler
 app.notFound((c) => {
