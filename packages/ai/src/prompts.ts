@@ -9,6 +9,11 @@ const WEB_CHARACTER_GUIDANCE =
   "You are speaking in a web chat. Use concise paragraphs. " +
   "Use markdown when it materially helps readability.";
 
+const VOICE_CHARACTER_GUIDANCE =
+  "You are speaking on a phone call. Reply in 1-2 short, spoken sentences. " +
+  "Do not use markdown, lists, or read URLs aloud. Spell numbers and times naturally. " +
+  "Pause so the caller can interrupt; if interrupted, stop and listen.";
+
 export function buildSystemPrompt(args: {
   actor: ConversationActor;
   channel: AiChannel;
@@ -17,7 +22,12 @@ export function buildSystemPrompt(args: {
   contextBlock: string;
 }): string {
   const persona = args.tenantPersona ?? args.actor.personaName ?? "Assistant";
-  const channelRules = args.channel === "sms" ? SMS_CHARACTER_GUIDANCE : WEB_CHARACTER_GUIDANCE;
+  const channelRules =
+    args.channel === "sms"
+      ? SMS_CHARACTER_GUIDANCE
+      : args.channel === "voice"
+        ? VOICE_CHARACTER_GUIDANCE
+        : WEB_CHARACTER_GUIDANCE;
 
   // The tenant boundary statement is non-negotiable and appears first so the
   // model treats it as the strongest constraint.

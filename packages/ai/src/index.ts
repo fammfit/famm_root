@@ -30,6 +30,9 @@ export {
 } from "./actions";
 export { validateTwilioSignature, buildTwimlMessage } from "./twilio";
 
+// Voice channel — Twilio Media Streams ↔ OpenAI Realtime bridge.
+export * from "./voice";
+
 export type {
   ConversationActor,
   ConversationTurn,

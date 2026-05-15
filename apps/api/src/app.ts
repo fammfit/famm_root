@@ -10,6 +10,7 @@ import webhookRoutes from "./routes/webhooks";
 import paymentRoutes from "./routes/payments";
 import aiRoutes from "./routes/ai";
 import smsRoutes from "./routes/sms";
+import voiceRoutes, { voicePlaceRouter } from "./routes/voice";
 import { authMiddleware } from "./middleware/auth";
 import { tenantMiddleware } from "./middleware/tenant";
 
@@ -55,11 +56,18 @@ app.route("/api/webhooks", webhookRoutes);
 // the Twilio signature, and the user is resolved by phone number lookup.
 app.route("/api/sms", smsRoutes);
 
+// Twilio Voice webhooks: outside auth for the same reason as SMS — Twilio
+// is authenticated by signature, callers are resolved by phone number, and
+// the realtime WS upgrade is gated by a short-lived JWT.
+app.route("/api/voice", voiceRoutes);
+
 // Protected routes: apply auth + tenant context
 app.use("/api/v1/*", authMiddleware, tenantMiddleware);
 
 app.route("/api/v1/payments", paymentRoutes);
 app.route("/api/v1/ai", aiRoutes);
+// Operator endpoint to place outbound voice calls — auth + tenant required.
+app.route("/api/v1/voice", voicePlaceRouter);
 
 // 404 handler
 app.notFound((c) => {
