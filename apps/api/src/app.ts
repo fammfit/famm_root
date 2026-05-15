@@ -8,6 +8,8 @@ import { rateLimiter } from "hono/rate-limiter";
 import healthRoutes from "./routes/health";
 import webhookRoutes from "./routes/webhooks";
 import paymentRoutes from "./routes/payments";
+import aiRoutes from "./routes/ai";
+import smsRoutes from "./routes/sms";
 import { authMiddleware } from "./middleware/auth";
 import { tenantMiddleware } from "./middleware/tenant";
 
@@ -49,10 +51,15 @@ app.route("/api/health", healthRoutes);
 // the Stripe webhook secret rather than by user-side JWT.
 app.route("/api/webhooks", webhookRoutes);
 
+// Twilio SMS webhook: outside auth — request authenticity is verified by
+// the Twilio signature, and the user is resolved by phone number lookup.
+app.route("/api/sms", smsRoutes);
+
 // Protected routes: apply auth + tenant context
 app.use("/api/v1/*", authMiddleware, tenantMiddleware);
 
 app.route("/api/v1/payments", paymentRoutes);
+app.route("/api/v1/ai", aiRoutes);
 
 // 404 handler
 app.notFound((c) => {
