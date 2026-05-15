@@ -30,13 +30,7 @@ export async function POST(request: NextRequest) {
         ipAddress: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
       });
 
-      return apiSuccess({
-        sent: true,
-        expiresAt: result.expiresAt,
-        ...(process.env["NODE_ENV"] !== "production" && result.code
-          ? { code: result.code }
-          : {}),
-      });
+      return apiSuccess({ sent: true, expiresAt: result.expiresAt });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
       if (msg === "RATE_LIMITED") {

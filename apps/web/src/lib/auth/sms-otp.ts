@@ -4,10 +4,15 @@ import { redis } from "@/lib/redis";
 import { generateOtp } from "./tokens";
 import { SMS_OTP_TTL_MINUTES, SMS_OTP_MAX_ATTEMPTS } from "@famm/auth";
 
-const RATE_LIMIT_KEY = (phone: string, tenantId: string) =>
-  `sms-otp:rl:${tenantId}:${phone}`;
+const RATE_LIMIT_KEY = (phone: string, tenantId: string) => `sms-otp:rl:${tenantId}:${phone}`;
+const IP_RATE_LIMIT_KEY = (ip: string) => `sms-otp:rl-ip:${ip}`;
 const MAX_PER_WINDOW = 3;
 const WINDOW_SECONDS = 10 * 60;
+// Per-IP cap protects against toll-fraud (one attacker spamming OTPs across
+// many different numbers). 10 OTPs / hour / IP is generous for shared NATs
+// but stops abuse at scale.
+const MAX_PER_IP_WINDOW = 10;
+const IP_WINDOW_SECONDS = 60 * 60;
 
 function normPhone(phone: string): string {
   return phone.replace(/\s+/g, "").replace(/[()-]/g, "");
@@ -21,7 +26,9 @@ export interface SendOtpParams {
 
 export interface SendOtpResult {
   expiresAt: Date;
-  // In development, the code is returned for testing; omitted in production
+  // The generated code is exposed ONLY when NODE_ENV === "test" so the
+  // vitest integration suite can verify the full flow without intercepting
+  // the SMS gateway. It is NEVER returned in development or production.
   code?: string;
 }
 
@@ -32,11 +39,19 @@ export async function sendSmsOtp({
 }: SendOtpParams): Promise<SendOtpResult> {
   const normalizedPhone = normPhone(phone);
 
-  // Rate limiting
+  // Per-(phone, tenant) rate limit.
   const rlKey = RATE_LIMIT_KEY(normalizedPhone, tenantId);
   const count = await redis.incr(rlKey);
   if (count === 1) await redis.expire(rlKey, WINDOW_SECONDS);
   if (count > MAX_PER_WINDOW) throw new Error("RATE_LIMITED");
+
+  // Per-IP cap (toll-fraud / SMS-DoS protection across many numbers).
+  if (requestIp) {
+    const ipKey = IP_RATE_LIMIT_KEY(requestIp);
+    const ipCount = await redis.incr(ipKey);
+    if (ipCount === 1) await redis.expire(ipKey, IP_WINDOW_SECONDS);
+    if (ipCount > MAX_PER_IP_WINDOW) throw new Error("RATE_LIMITED");
+  }
 
   const code = generateOtp(6);
   const codeHash = await bcrypt.hash(code, 8); // low cost since OTPs are short-lived
@@ -52,12 +67,13 @@ export async function sendSmsOtp({
     data: { phone: normalizedPhone, tenantId, codeHash, expiresAt, requestIp },
   });
 
-  // Send via Twilio
+  // Send via Twilio. The code is NEVER returned in dev/prod API responses
+  // and NEVER logged - it only leaves the system through the SMS body.
   await deliverSms(normalizedPhone, `Your FAMM verification code is: ${code}`);
 
   return {
     expiresAt,
-    ...(process.env["NODE_ENV"] !== "production" ? { code } : {}),
+    ...(process.env["NODE_ENV"] === "test" ? { code } : {}),
   };
 }
 
@@ -67,11 +83,7 @@ export interface VerifyOtpParams {
   tenantId: string;
 }
 
-export async function verifySmsOtp({
-  phone,
-  code,
-  tenantId,
-}: VerifyOtpParams): Promise<true> {
+export async function verifySmsOtp({ phone, code, tenantId }: VerifyOtpParams): Promise<true> {
   const normalizedPhone = normPhone(phone);
 
   const record = await prisma.smsOtp.findFirst({
@@ -114,7 +126,8 @@ async function deliverSms(to: string, body: string): Promise<void> {
 
   if (!accountSid || !authToken || !from) {
     if (process.env["NODE_ENV"] !== "production") {
-      console.warn(`[SMS] Would send to ${to}: ${body}`);
+      // Never log the SMS body — it contains the OTP. Just acknowledge.
+      console.warn(`[SMS] Twilio not configured; would have sent a message to ${to}`);
       return;
     }
     throw new Error("Twilio credentials not configured");

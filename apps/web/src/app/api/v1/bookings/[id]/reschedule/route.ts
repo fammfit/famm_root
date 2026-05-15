@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { getRequestContext } from "@/lib/request-context";
+import { getRequestContextChecked } from "@/lib/request-context";
 import { apiSuccess, apiError, handleError } from "@/lib/api-response";
 import { RescheduleBookingSchema } from "@famm/shared";
 import { validateBookingRules } from "@/lib/booking/rules";
@@ -8,12 +8,9 @@ import { isSlotAvailable } from "@/lib/booking/availability";
 import { publishEvent } from "@/lib/booking/realtime";
 import { nextWaiter } from "@/lib/booking/waitlist";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const ctx = getRequestContext();
+    const ctx = await getRequestContextChecked();
     const body = (await request.json()) as unknown;
     const input = RescheduleBookingSchema.parse(body);
 
@@ -28,11 +25,7 @@ export async function POST(
     }
 
     if (booking.status === "CANCELLED" || booking.status === "COMPLETED") {
-      return apiError(
-        "INVALID_STATE",
-        "Cannot reschedule a cancelled or completed booking",
-        422
-      );
+      return apiError("INVALID_STATE", "Cannot reschedule a cancelled or completed booking", 422);
     }
 
     const [service, tenantSettings] = await Promise.all([
@@ -44,9 +37,7 @@ export async function POST(
     if (!service) return apiError("NOT_FOUND", "Service not found", 404);
 
     const newStart = new Date(input.startAt);
-    const newEnd = new Date(
-      newStart.getTime() + service.durationMinutes * 60 * 1000
-    );
+    const newEnd = new Date(newStart.getTime() + service.durationMinutes * 60 * 1000);
 
     const rulesError = await validateBookingRules({
       tenantId: ctx.tenantId,
@@ -58,34 +49,55 @@ export async function POST(
     });
     if (rulesError) return apiError(rulesError.code, rulesError.message, 422);
 
-    const available = await isSlotAvailable({
-      tenantId: ctx.tenantId,
-      serviceId: booking.serviceId,
-      trainerId: booking.trainerId ?? undefined,
-      locationId: booking.locationId ?? undefined,
-      startAt: newStart,
-      endAt: newEnd,
-    });
-    if (!available) {
-      return apiError(
-        "SLOT_UNAVAILABLE",
-        "The requested slot is no longer available",
-        409
-      );
-    }
-
     const previousStartAt = booking.startAt;
     const previousEndAt = booking.endAt;
 
-    const updated = await prisma.booking.update({
-      where: { id: params.id },
-      data: {
-        startAt: newStart,
-        endAt: newEnd,
-        timezone: input.timezone,
-        status: booking.status === "PENDING" ? "PENDING" : "CONFIRMED",
-      },
-    });
+    // Atomically: re-check availability (excluding the booking being moved,
+    // since its old slot is about to be freed) and apply the update. A
+    // SERIALIZABLE transaction stops two concurrent reschedules from both
+    // claiming the same freed slot.
+    let updated;
+    try {
+      updated = await prisma.$transaction(
+        async (tx) => {
+          const stillAvailable = await isSlotAvailable(
+            {
+              tenantId: ctx.tenantId,
+              serviceId: booking.serviceId,
+              trainerId: booking.trainerId ?? undefined,
+              locationId: booking.locationId ?? undefined,
+              startAt: newStart,
+              endAt: newEnd,
+              excludeBookingId: booking.id,
+            },
+            tx
+          );
+          if (!stillAvailable) {
+            throw new Error("SLOT_UNAVAILABLE");
+          }
+          return tx.booking.update({
+            where: { id: params.id },
+            data: {
+              startAt: newStart,
+              endAt: newEnd,
+              timezone: input.timezone,
+              status: booking.status === "PENDING" ? "PENDING" : "CONFIRMED",
+            },
+          });
+        },
+        { isolationLevel: "Serializable" }
+      );
+    } catch (txErr) {
+      const msg = txErr instanceof Error ? txErr.message : "";
+      if (
+        msg === "SLOT_UNAVAILABLE" ||
+        msg.includes("P2034") ||
+        msg.includes("could not serialize")
+      ) {
+        return apiError("SLOT_UNAVAILABLE", "The requested slot is no longer available", 409);
+      }
+      throw txErr;
+    }
 
     void prisma.domainEvent.create({
       data: {

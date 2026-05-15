@@ -40,7 +40,9 @@ const checkoutSchema = z.object({
   bookingId: z.string().optional(),
   trainerProfileId: z.string().optional(),
   customerEmail: z.string().email().optional(),
-  destinationAccountId: z.string().optional(),
+  // NOTE: destinationAccountId is intentionally NOT accepted from the client.
+  // It is derived server-side from the trainerProfile's verified Connect
+  // account so a malicious caller cannot redirect funds.
   trialPeriodDays: z.number().int().min(0).max(365).optional(),
   lineItems: z
     .array(
@@ -80,6 +82,33 @@ payments.post("/checkout", async (c) => {
       : {}),
   }));
 
+  // Resolve the Connect destination strictly from server state. We refuse to
+  // honor a client-supplied destination — accepting one would let a caller
+  // redirect platform revenue to any Connect account they control.
+  let destinationAccountId: string | undefined;
+  if (body.trainerProfileId) {
+    // TrainerProfile is scoped to a tenant via the user's membership.
+    const trainer = await prisma.trainerProfile.findFirst({
+      where: {
+        id: body.trainerProfileId,
+        user: { memberships: { some: { tenantId: tenant.tenantId } } },
+      },
+      select: { stripeConnectAccountId: true },
+    });
+    if (!trainer) {
+      return c.json(
+        {
+          success: false,
+          error: { code: "NOT_FOUND", message: "Trainer not found in this tenant" },
+        },
+        404
+      );
+    }
+    if (trainer.stripeConnectAccountId) {
+      destinationAccountId = trainer.stripeConnectAccountId;
+    }
+  }
+
   const session = await createCheckoutSession({
     tenantId: tenant.tenantId,
     successUrl: body.successUrl,
@@ -89,7 +118,7 @@ payments.post("/checkout", async (c) => {
     ...(body.bookingId ? { bookingId: body.bookingId } : {}),
     ...(body.trainerProfileId ? { trainerProfileId: body.trainerProfileId } : {}),
     ...(body.customerEmail ? { customerEmail: body.customerEmail } : {}),
-    ...(body.destinationAccountId ? { destinationAccountId: body.destinationAccountId } : {}),
+    ...(destinationAccountId ? { destinationAccountId } : {}),
     ...(body.trialPeriodDays ? { trialPeriodDays: body.trialPeriodDays } : {}),
     idempotencyKey: `checkout_${user.sub}_${Date.now()}`,
   });
@@ -107,7 +136,23 @@ const refundSchema = z.object({
 });
 
 payments.post("/refunds", async (c) => {
+  const tenant = tenantCtx(c);
   const body = refundSchema.parse(await c.req.json());
+
+  // Cross-tenant IDOR guard: only refund payments owned by the caller's
+  // tenant. Without this check, an attacker who learns a paymentId can
+  // refund a payment in any tenant.
+  const payment = await prisma.payment.findUnique({
+    where: { id: body.paymentId },
+    select: { tenantId: true },
+  });
+  if (!payment || payment.tenantId !== tenant.tenantId) {
+    return c.json(
+      { success: false, error: { code: "NOT_FOUND", message: "Payment not found" } },
+      404
+    );
+  }
+
   const result = await createRefund({
     paymentId: body.paymentId,
     ...(body.amount != null ? { amount: body.amount } : {}),
@@ -128,9 +173,13 @@ const onboardSchema = z.object({
 });
 
 payments.post("/connect/onboard", async (c) => {
+  const tenant = tenantCtx(c);
   const body = onboardSchema.parse(await c.req.json());
-  const profile = await prisma.trainerProfile.findUnique({
-    where: { id: body.trainerProfileId },
+  const profile = await prisma.trainerProfile.findFirst({
+    where: {
+      id: body.trainerProfileId,
+      user: { memberships: { some: { tenantId: tenant.tenantId } } },
+    },
     include: { user: true },
   });
   if (!profile) return c.json({ success: false, error: { code: "NOT_FOUND" } }, 404);
@@ -152,16 +201,29 @@ payments.post("/connect/onboard", async (c) => {
 });
 
 payments.get("/connect/:trainerProfileId/status", async (c) => {
+  const tenant = tenantCtx(c);
   const id = c.req.param("trainerProfileId");
+  const exists = await prisma.trainerProfile.findFirst({
+    where: {
+      id,
+      user: { memberships: { some: { tenantId: tenant.tenantId } } },
+    },
+    select: { id: true },
+  });
+  if (!exists) return c.json({ success: false, error: { code: "NOT_FOUND" } }, 404);
   const status = await syncTrainerConnectStatus(id);
   if (!status) return c.json({ success: false, error: { code: "NO_ACCOUNT" } }, 404);
   return c.json({ success: true, data: status });
 });
 
 payments.post("/connect/:trainerProfileId/dashboard", async (c) => {
+  const tenant = tenantCtx(c);
   const id = c.req.param("trainerProfileId");
-  const profile = await prisma.trainerProfile.findUnique({
-    where: { id },
+  const profile = await prisma.trainerProfile.findFirst({
+    where: {
+      id,
+      user: { memberships: { some: { tenantId: tenant.tenantId } } },
+    },
     select: { stripeConnectAccountId: true },
   });
   if (!profile?.stripeConnectAccountId)
@@ -171,8 +233,20 @@ payments.post("/connect/:trainerProfileId/dashboard", async (c) => {
 });
 
 payments.get("/connect/account/:accountId/status", async (c) => {
-  const id = c.req.param("accountId");
-  const status = await getConnectAccountStatus(id);
+  const tenant = tenantCtx(c);
+  const accountId = c.req.param("accountId");
+  // Only allow status lookups for Connect accounts owned by a trainer in
+  // this tenant. Without this guard, any authenticated user could probe the
+  // status of arbitrary platform-owned Connect accounts.
+  const owned = await prisma.trainerProfile.findFirst({
+    where: {
+      stripeConnectAccountId: accountId,
+      user: { memberships: { some: { tenantId: tenant.tenantId } } },
+    },
+    select: { id: true },
+  });
+  if (!owned) return c.json({ success: false, error: { code: "NOT_FOUND" } }, 404);
+  const status = await getConnectAccountStatus(accountId);
   return c.json({ success: true, data: status });
 });
 

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@famm/db";
 
 interface AvailabilityCheckParams {
   tenantId: string;
@@ -7,17 +8,25 @@ interface AvailabilityCheckParams {
   locationId?: string;
   startAt: Date;
   endAt: Date;
+  /** Ignore this booking id when checking for overlap (used during reschedule). */
+  excludeBookingId?: string;
 }
 
-export async function isSlotAvailable({
-  tenantId,
-  serviceId,
-  trainerId,
-  locationId,
-  startAt,
-  endAt,
-}: AvailabilityCheckParams): Promise<boolean> {
-  const overlapping = await prisma.booking.count({
+type PrismaLike = Prisma.TransactionClient | typeof prisma;
+
+export async function isSlotAvailable(
+  {
+    tenantId,
+    serviceId,
+    trainerId,
+    locationId,
+    startAt,
+    endAt,
+    excludeBookingId,
+  }: AvailabilityCheckParams,
+  client: PrismaLike = prisma
+): Promise<boolean> {
+  const overlapping = await client.booking.count({
     where: {
       tenantId,
       serviceId,
@@ -25,13 +34,14 @@ export async function isSlotAvailable({
       AND: [{ startAt: { lt: endAt } }, { endAt: { gt: startAt } }],
       ...(trainerId ? { trainerId } : {}),
       ...(locationId ? { locationId } : {}),
+      ...(excludeBookingId ? { NOT: { id: excludeBookingId } } : {}),
     },
   });
 
   if (overlapping > 0) return false;
 
   if (trainerId) {
-    const trainerBlocked = await prisma.blockedPeriod.count({
+    const trainerBlocked = await client.blockedPeriod.count({
       where: {
         tenantId,
         trainerId,
@@ -43,7 +53,7 @@ export async function isSlotAvailable({
   }
 
   if (locationId) {
-    const locationBlocked = await prisma.blockedPeriod.count({
+    const locationBlocked = await client.blockedPeriod.count({
       where: {
         tenantId,
         locationId,

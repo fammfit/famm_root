@@ -1,10 +1,7 @@
 import type { MiddlewareHandler } from "hono";
 import { jwtVerify } from "jose";
 import type { JwtPayload } from "@famm/types";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env["JWT_SECRET"] ?? "dev-secret-change-in-production"
-);
+import { getJwtSecret, JWT_ISSUER, JWT_AUDIENCE_WEB, JWT_AUDIENCE_API } from "@famm/auth";
 
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   const authHeader = c.req.header("authorization");
@@ -18,7 +15,12 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
   }
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret(), {
+      issuer: JWT_ISSUER,
+      // Web tokens (issued by the Next.js app) are scoped to "famm:web"; some
+      // backend-to-backend calls use "famm:api". Accept either.
+      audience: [JWT_AUDIENCE_WEB, JWT_AUDIENCE_API],
+    });
     c.set("user", payload as unknown as JwtPayload);
     await next();
   } catch {

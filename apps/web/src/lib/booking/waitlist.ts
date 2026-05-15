@@ -29,16 +29,14 @@ export interface WaitlistEntryRecord {
   position?: number;
 }
 
-const slotKey = (startAt: string, trainerId?: string) =>
-  `${trainerId ?? "_"}:${startAt}`;
+const slotKey = (startAt: string, trainerId?: string) => `${trainerId ?? "_"}:${startAt}`;
 
 const entriesKey = (tenantId: string, serviceId: string, slot: string) =>
   `waitlist:entries:${tenantId}:${serviceId}:${slot}`;
 
 const entryKey = (entryId: string) => `waitlist:entry:${entryId}`;
 
-const userKey = (tenantId: string, userId: string) =>
-  `waitlist:user:${tenantId}:${userId}`;
+const userKey = (tenantId: string, userId: string) => `waitlist:user:${tenantId}:${userId}`;
 
 export async function joinWaitlist(input: {
   tenantId: string;
@@ -90,18 +88,17 @@ export async function leaveWaitlist(
 ): Promise<boolean> {
   const ek = entryKey(entryId);
   const data = await redis.hgetall(ek);
-  if (!data || !data["id"]) return false;
-  if (data["tenantId"] !== tenantId || data["userId"] !== userId) return false;
+  // Fast-reject if the entry doesn't exist or isn't owned by this caller.
+  // The ownership check happens BEFORE any mutation — without this guard a
+  // caller could observe metadata about another tenant's entry by id alone.
+  if (!data || !data["id"] || data["tenantId"] !== tenantId || data["userId"] !== userId) {
+    return false;
+  }
 
   const slot = slotKey(data["startAt"] ?? "", data["trainerId"] || undefined);
   const setKey = entriesKey(tenantId, data["serviceId"] ?? "", slot);
 
-  await redis
-    .multi()
-    .del(ek)
-    .zrem(setKey, entryId)
-    .srem(userKey(tenantId, userId), entryId)
-    .exec();
+  await redis.multi().del(ek).zrem(setKey, entryId).srem(userKey(tenantId, userId), entryId).exec();
   return true;
 }
 
