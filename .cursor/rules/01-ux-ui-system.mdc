@@ -1,5 +1,5 @@
 ---
-description: The UX/UI system overview — tier model, where each layer lives, how to navigate it.
+description: UX/UI system rules. Read /design-system before writing UI; reuse over create.
 globs:
   - "apps/web/**/*.{ts,tsx,css}"
   - "packages/ui/**/*.{ts,tsx,css}"
@@ -7,51 +7,80 @@ globs:
 alwaysApply: true
 ---
 
-# UX/UI System
+# UX/UI System — how to work in it
 
-The system has four tiers. Reuse before you create — every component you
-*could* write may already exist one tier up.
+## Before you edit UI — read these (mandatory)
 
-| Tier | Lives in | Stability | Examples |
-|------|----------|-----------|----------|
-| **Tokens** | `packages/ui/src/tokens/` (source: `tokens.json`) | Versioned with the package | colors, space, radii, motion |
-| **L1 Primitives** | `packages/ui/src/components/primitives/` | Stable, semver | `Button`, `Input`, `Card`, `Badge`, `Spinner` |
-| **L2 Patterns** | `packages/ui/src/components/patterns/` | Stable within a release train | `FormField`, `StatCard`, `SessionTimer` |
-| **L3 Features** | `apps/web/src/components/<feature>/` | Free to change | feature-specific compositions |
+For any change to `apps/web/**` or `packages/ui/**`, **before editing**:
 
-## Before you write JSX
+1. `design-system/README.md` — the navigation map.
+2. `design-system/principles.md` — tie-breaker order.
+3. `design-system/ux-rules.md` — interaction & behavior rules.
+4. `design-system/accessibility.md` — a11y baseline.
+5. `design-system/responsive.md` — breakpoint behavior.
 
-1. Search `packages/ui/src/components/primitives` and `…/patterns`. If
-   what you need exists, use it — don't fork.
-2. If close-but-not-quite, **extend the existing `cva()` variants**, not
-   the consumer.
-3. If it's genuinely new:
-   - Reused across features? → propose as L2 pattern.
-   - One-off for a feature? → L3 in `apps/web/src/components/<feature>/`.
-   - Net-new primitive? → **stop and ask**. DS owner approves L1.
+For specific work, also read:
 
-## What lives where
+- Tokens: `design-system/tokens/README.md` + the source
+  `packages/ui/src/tokens/tokens.json`.
+- New component: `design-system/components/README.md` (L1) or
+  `design-system/patterns/README.md` (L2).
+- Motion: `design-system/motion.md`.
+- Copy: `design-system/content-guidelines.md`.
 
-- **Documentation, contracts, rules:** `design-system/*.md` and
-  subfolders.
-- **Token source of truth:** `packages/ui/src/tokens/tokens.json`.
-- **Generated outputs:** `tokens.css` (CSS variables) and `tokens.ts`
-  (typed const). **Do not edit.** Run `npm run tokens:generate`.
-- **Tailwind theme:** `packages/ui/tailwind.config.ts`. `apps/web`
-  inherits via `presets: [uiPreset]`.
-- **Lint enforcement:** `packages/config/eslint/design-system.js`.
+If those files don't yet exist in your context, **open them with the
+file-read tool before proposing changes**. Do not infer the rules from
+filenames.
 
-## When in doubt
+## Tiers — pick the right home
 
-Stop and ask. Do not guess between two valid patterns. Do not invent a
-new token name, color value, or component name.
+| Tier | Lives in | Use when |
+|------|----------|----------|
+| **Tokens** | `packages/ui/src/tokens/tokens.json` | adding a new color/space/radius/motion value |
+| **L1 Primitive** | `packages/ui/src/components/primitives/` | a new atomic UI element (button, input). **Requires DS-owner approval — stop and ask.** |
+| **L2 Pattern** | `packages/ui/src/components/patterns/` | a composite reused across 2+ features |
+| **L3 Feature** | `apps/web/src/components/<feature>/` | feature-specific one-off |
 
-## Pointers
+## Source of truth, by surface
 
-- Strategy: `docs/DESIGN_SYSTEM.md`
-- Principles: `design-system/principles.md`
-- UX rules: `design-system/ux-rules.md`
-- Accessibility: `design-system/accessibility.md`
-- Responsive: `design-system/responsive.md`
-- Motion: `design-system/motion.md`
-- Content: `design-system/content-guidelines.md`
+| Surface | Where |
+|---------|-------|
+| Tokens (data) | `packages/ui/src/tokens/tokens.json` |
+| Tokens (CSS vars, generated — do not edit) | `packages/ui/src/tokens/tokens.css` |
+| Tokens (typed const, generated — do not edit) | `packages/ui/src/tokens/tokens.ts` |
+| Tailwind theme | `packages/ui/tailwind.config.ts` (`apps/web` inherits via preset) |
+| Lint enforcement | `packages/config/eslint/design-system.js` |
+| AI rules (this file set) | `.cursor/rules/00..05-*.mdc` and `CLAUDE.md` |
+
+## Decision flow before writing JSX
+
+```
+need a UI thing
+  └─ does it exist in @famm/ui?           ── yes ──► import & use
+        │ no
+        └─ near-match in @famm/ui?         ── yes ──► extend its cva() variants
+              │ no
+              └─ reused across features?
+                    ├─ yes ──► propose new L2 pattern
+                    └─ no  ──► place as L3 in apps/web/src/components/<feature>/
+```
+
+If your need maps to "new L1 primitive", **stop and ask** before scaffolding.
+
+## When uncertain
+
+- Two valid patterns? Don't pick — ask.
+- Token name doesn't fit? Don't invent a class string — propose the token
+  in your reply.
+- Rule conflicts with the request? Cite the rule and ask before bending it.
+
+## After editing — explain your decisions
+
+End every UI reply with a `Design-system decisions:` section listing:
+
+1. Components reused (with paths).
+2. Tokens chosen (and why if non-obvious).
+3. A11y behavior preserved/added.
+4. Anything flagged `OPEN:` for human review.
+
+Skip this only for backend-only edits.

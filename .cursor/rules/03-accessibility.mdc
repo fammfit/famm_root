@@ -1,5 +1,5 @@
 ---
-description: Accessibility rules — WCAG 2.2 AA baseline. These are binding.
+description: Accessibility rules. WCAG 2.2 AA. Binding on every interactive element.
 globs:
   - "apps/web/**/*.{ts,tsx}"
   - "packages/ui/**/*.{ts,tsx}"
@@ -8,68 +8,106 @@ alwaysApply: true
 
 # Accessibility
 
-Baseline: **WCAG 2.2 Level AA**. CI enforces what it can; the rest is on
-you. Source of truth: `design-system/accessibility.md`.
+Baseline: **WCAG 2.2 Level AA**. Source of truth:
+`design-system/accessibility.md`. Read it before adding a new
+interaction. The rules below are the binding short version.
 
-## Hard rules
+## Required on every interactive element
 
-1. **Visible focus ring** on every interactive element. Never
-   `outline: none` without a replacement of equal or better contrast.
-2. **Accessible name** on every interactive element. Visible label, or
-   `aria-label`, or `aria-labelledby`. Icon-only buttons must have one.
-3. **44×44 minimum touch target** on touch viewports. The `Button`
-   `size="icon"` variant ships at `h-11 w-11`.
-4. **Every input has a `<label>`.** Use the `FormField` pattern. Bare
-   `<input>` is banned outside L1 primitives.
-5. **Reduced motion respected.** Branch on `useReducedMotion()` from
-   `@famm/ui`. Tokens already collapse `--duration-*` to 0ms in the
-   reduced-motion media query.
-6. **Color is never the only signal.** Errors are red *and* labelled. PR
-   state is gold *and* labelled. Required fields have an asterisk *and*
-   `aria-required`.
+1. **Semantic HTML.** `<button>`, `<a>`, `<input>`, `<select>`,
+   `<textarea>`, `<dialog>` — not `<div>` or `<span>` with handlers.
+2. **Accessible name.** Visible text, `aria-label`, or `aria-labelledby`.
+   Icon-only buttons must have one.
+3. **Keyboard reachable.** Tab order matches visual order. Enter and
+   Space activate buttons identically.
+4. **Visible focus ring.** Never `outline-none` / `outline: none` without
+   a replacement of equal or better contrast. Use the `ring` utility
+   bound to `--color-focus-ring`.
+5. **Touch target 44×44 CSS px** on touch viewports. The `Button`
+   `size="icon"` variant ships at `h-11 w-11`. Icon-only controls in
+   dense rows must have a 44×44 hit area via padding.
+6. **Color is never the only signal.** Errors are red **and** labelled
+   (or carry an icon). PR state is gold **and** carries "PR". Required
+   fields have an asterisk **and** `aria-required`.
 
-## Keyboard
+## Forms
 
-- Every interactive element is reachable by Tab in visual order.
-- Escape closes modals and popovers; focus returns to the trigger.
-- Arrow keys navigate within composite widgets (tabs, listbox, calendar).
-- Enter and Space both activate buttons identically. `<div onClick>`
-  doesn't.
+- **Wrap every input in `FormField`** (`@famm/ui`). Never use a bare
+  `<input>` in feature code.
+- The label is associated with the control via `htmlFor` / `id`. The
+  `FormField` pattern wires this automatically.
+- Errors:
+  - `aria-invalid="true"` on the control.
+  - Error message has `role="alert"` and is linked via
+    `aria-describedby`.
+  - Error text lives below the field, not in a tooltip.
+- Required fields: visible asterisk **and** `aria-required="true"`.
+- Set `autocomplete` where applicable (`email`, `tel`, `current-password`,
+  `one-time-code`, `cc-number`, …).
+- Numbers: `inputMode="numeric"` for reps/weights; `inputMode="decimal"`
+  only when fractions are actually allowed.
 
 ## Screen readers
 
-- Live data (timers, set counters, async results) uses
-  `aria-live="polite"`. Alerts use `role="alert"`.
-- Modals: `aria-modal="true"` and `aria-labelledby` pointing at the
-  title.
-- Form errors: `aria-invalid="true"` on the control, error message
-  associated via `aria-describedby`.
-- Decorative icons: `aria-hidden="true"`.
+- **Live data** that changes (timers, set counters, async results) is
+  inside an `aria-live="polite"` region.
+- **Critical messages** (failed save, expired session) use
+  `role="alert"` — they announce immediately.
+- **Modals**: `aria-modal="true"` + `aria-labelledby` on the title.
+  Focus is trapped while open; focus returns to the trigger on close.
+- **Decorative icons** carry `aria-hidden="true"`.
+- **Meaningful icons** carry an `aria-label`.
 
-## Contrast
+## Keyboard
 
-- Body text ≥ 4.5:1; large text ≥ 3:1; meaningful UI graphics ≥ 3:1.
-- Tokens are pre-validated. If you introduce a raw color (which you
-  shouldn't — see `02-component-rules.mdc`), it's your contrast burden.
+- **Escape** closes modals, popovers, menus; focus returns to trigger.
+- **Arrow keys** navigate within composite widgets (tabs, listbox,
+  calendar). **Tab** moves between widgets.
+- **Enter/Space** activate buttons identically.
+- **No keyboard traps** outside intentional focus traps (modals).
 
-## When uncertain
+## Motion & reduced motion
 
-If you're not sure how to make something accessible, **don't ship the
-inaccessible version**. Ask. The right answer is often "use the existing
-primitive that already handles this".
+- Animations > 200ms or involving translation must branch on
+  `useReducedMotion()` from `@famm/ui`.
+- Tokens already collapse `--duration-*` to `0ms` inside
+  `prefers-reduced-motion: reduce` — so a transition driven purely by
+  `duration-fast`/`base`/`slow` is reduced for free.
+- No auto-playing video, no parallax, no infinite loops (except active
+  loading indicators).
+
+## Contrast — non-negotiable
+
+- Body text ≥ **4.5:1** against its background.
+- Large text (≥ 18px or ≥ 14px bold) ≥ **3:1**.
+- Meaningful UI graphics (icons, focus rings, form borders) ≥ **3:1**.
+- Tokens are pre-validated. **If you introduce a raw color (you
+  shouldn't — see `04-design-tokens.mdc`), include the contrast ratio
+  in your `Design-system decisions` block.**
 
 ## What CI enforces
 
-- `eslint-plugin-jsx-a11y/recommended` plus stricter overrides
+- `eslint-plugin-jsx-a11y/recommended` + tightened overrides
   (`no-autofocus`, `click-events-have-key-events`,
-  `no-static-element-interactions`).
+  `no-static-element-interactions`, `anchor-is-valid`).
 - `no-restricted-syntax` bans raw hex/px/rgb and inline `style={}`
   outside L1 primitives.
 
-## What CI doesn't catch (review enforces)
+## What CI can't catch (you must)
 
 - Logical tab order.
-- That an `aria-label` actually describes the action.
-- That a live region announces what the user needs.
-- That a focus ring is visible against its actual background.
-- That a "destructive" button looks destructive in dark mode too.
+- `aria-label` text quality (it should describe the *action*, not the
+  *icon*).
+- Live regions actually announcing what the user needs.
+- Focus ring visible against this surface (not just *some* surface).
+- Destructive state still reads as destructive in dark mode.
+
+## After editing — explain
+
+Include in your `Design-system decisions:` block:
+
+- `A11y:` keyboard reachable, focus ring on `<Button>` and custom
+  control, `aria-live` added to set counter, `useReducedMotion` branch
+  on celebrate animation.
+- `OPEN:` items the user must verify manually — screen-reader pass on
+  the new modal, focus order in landscape phone view.
