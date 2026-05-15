@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Permission } from "@famm/auth";
 import { can, canAny } from "@famm/auth";
 import type { UserRole } from "@famm/types";
+import { isSessionRevoked } from "@/lib/auth/session";
 
 export interface AuthContext {
   userId: string;
@@ -12,7 +13,9 @@ export interface AuthContext {
   extraPermissions: string[];
 }
 
-// Extract auth context from request headers (set by middleware)
+// Extract auth context from request headers (set by middleware). Does NOT
+// check Redis revocation. Use {@link getAuthContextChecked} for state-
+// changing routes so revoked-but-not-yet-expired JWTs are rejected.
 export function getAuthContext(request: NextRequest): AuthContext {
   const userId = request.headers.get("x-user-id");
   const tenantId = request.headers.get("x-tenant-id");
@@ -27,6 +30,20 @@ export function getAuthContext(request: NextRequest): AuthContext {
   }
 
   return { userId, tenantId, userEmail, userRole, sessionId, extraPermissions };
+}
+
+// Same as getAuthContext but additionally consults Redis to reject revoked
+// sessions. Tokens are valid for 15m, so without this check a logout or
+// admin revoke only takes effect on next token refresh.
+export async function getAuthContextChecked(request: NextRequest): Promise<AuthContext> {
+  const ctx = getAuthContext(request);
+  if (await isSessionRevoked(ctx.sessionId)) {
+    throw Object.assign(new Error("Session revoked"), {
+      code: "UNAUTHORIZED",
+      statusCode: 401,
+    });
+  }
+  return ctx;
 }
 
 // Server component version (uses next/headers)
@@ -50,10 +67,7 @@ export async function getServerAuthContext(): Promise<AuthContext> {
 }
 
 // Inline permission check — throws if denied
-export function assertPermission(
-  ctx: AuthContext,
-  permission: Permission
-): void {
+export function assertPermission(ctx: AuthContext, permission: Permission): void {
   if (!can(ctx.userRole, permission, ctx.extraPermissions)) {
     throw Object.assign(new Error("Insufficient permissions"), {
       code: "FORBIDDEN",
@@ -105,10 +119,7 @@ export function withPermission(
 }
 
 // Ensure the acting user can only modify resources within their own tenant
-export function assertSameTenant(
-  ctx: AuthContext,
-  resourceTenantId: string
-): void {
+export function assertSameTenant(ctx: AuthContext, resourceTenantId: string): void {
   if (ctx.userRole !== "SUPER_ADMIN" && ctx.tenantId !== resourceTenantId) {
     throw Object.assign(new Error("Cross-tenant access denied"), {
       code: "FORBIDDEN",

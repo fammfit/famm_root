@@ -1,21 +1,26 @@
 version: "3.9"
 
+# Credentials are sourced from the host environment (or a .env file in this
+# directory, which docker compose picks up automatically). Generate strong
+# values locally with:
+#   echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)" >> .env
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: famm-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: famm
-      POSTGRES_PASSWORD: famm_dev_password
-      POSTGRES_DB: famm_dev
+      POSTGRES_USER: ${POSTGRES_USER:-famm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-famm_dev}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U famm -d famm_dev"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-famm} -d ${POSTGRES_DB:-famm_dev}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -26,7 +31,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -41,10 +46,11 @@ services:
     restart: unless-stopped
     command: ["-js", "-m", "8222", "--name", "famm-nats"]
     ports:
-      - "4222:4222"
-      - "8222:8222"
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:8222:8222"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      test:
+        ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8222/healthz"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -60,7 +66,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://famm:famm_dev_password@postgres:5432/famm_dev
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-famm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-famm_dev}
       - REDIS_URL=redis://redis:6379
     env_file: .env.local
     volumes:
@@ -85,7 +91,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=4000
-      - DATABASE_URL=postgresql://famm:famm_dev_password@postgres:5432/famm_dev
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-famm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-famm_dev}
       - REDIS_URL=redis://redis:6379
       - NATS_URL=nats://nats:4222
     env_file: .env.local

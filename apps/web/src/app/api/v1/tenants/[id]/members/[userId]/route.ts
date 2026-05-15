@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { getAuthContext, assertPermission } from "@/lib/rbac/access-control";
+import { getAuthContextChecked, assertPermission } from "@/lib/rbac/access-control";
 import { assertMembership } from "@/lib/tenant/query-helpers";
 import { canAssignRole } from "@famm/auth";
 import { writeAuditLog } from "@/lib/audit";
@@ -14,7 +14,7 @@ type RouteParams = { params: Promise<{ id: string; userId: string }> };
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: tenantId, userId: targetUserId } = await params;
-    const ctx = getAuthContext(request);
+    const ctx = await getAuthContextChecked(request);
 
     assertPermission(ctx, "user:update:role");
     await assertMembership(ctx.userId, tenantId);
@@ -67,7 +67,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: tenantId, userId: targetUserId } = await params;
-    const ctx = getAuthContext(request);
+    const ctx = await getAuthContextChecked(request);
 
     // Allow self-removal or require member:delete permission
     if (ctx.userId !== targetUserId) {

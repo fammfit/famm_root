@@ -2,7 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyMagicLink } from "@/lib/auth/magic-link";
 import { createSession } from "@/lib/auth/session";
-import { issueTokenBundle } from "@/lib/auth/tokens";
+import { newRefreshTokenPair, signAccessToken } from "@/lib/auth/tokens";
+import { secureCookieFlag } from "@/lib/auth/cookies";
 import { apiSuccess, apiError, handleError } from "@/lib/api-response";
 import { writeAuditLog } from "@/lib/audit";
 import { MagicLinkVerifySchema } from "@famm/shared";
@@ -54,13 +55,7 @@ export async function GET(request: NextRequest) {
 
     const membership = user.memberships[0] ?? { role: "CLIENT" as const, permissions: [] };
 
-    const { accessToken, refreshToken, refreshTokenHash } = await issueTokenBundle({
-      sub: user.id,
-      email: user.email,
-      tenantId: tenant.id,
-      role: membership.role,
-      sid: "", // will be overwritten below
-    });
+    const { refreshToken, refreshTokenHash } = newRefreshTokenPair();
 
     const session = await createSession({
       userId: user.id,
@@ -74,8 +69,7 @@ export async function GET(request: NextRequest) {
       extraPermissions: "permissions" in membership ? (membership.permissions as string[]) : [],
     });
 
-    // Re-sign with actual sessionId
-    const { accessToken: finalToken } = await issueTokenBundle({
+    const finalToken = await signAccessToken({
       sub: user.id,
       email: user.email,
       tenantId: tenant.id,
@@ -103,18 +97,25 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const appUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000";
+    const appUrl =
+      process.env["NEXT_PUBLIC_APP_URL"] ??
+      (process.env["NODE_ENV"] === "production"
+        ? (() => {
+            throw new Error("NEXT_PUBLIC_APP_URL must be set in production");
+          })()
+        : "http://localhost:3000");
+    const secure = secureCookieFlag();
     const response = NextResponse.redirect(new URL("/dashboard", appUrl));
     response.cookies.set("access_token", finalToken, {
       httpOnly: true,
-      secure: process.env["NODE_ENV"] === "production",
+      secure,
       sameSite: "lax",
       maxAge: 60 * 15,
     });
     response.cookies.set("refresh_token", refreshToken, {
       httpOnly: true,
-      secure: process.env["NODE_ENV"] === "production",
-      sameSite: "lax",
+      secure,
+      sameSite: "strict",
       path: "/api/v1/auth/refresh",
       maxAge: 60 * 60 * 24 * 30,
     });

@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { getRequestContext } from "@/lib/request-context";
+import { getRequestContextChecked } from "@/lib/request-context";
 import { apiSuccess, handleError } from "@/lib/api-response";
 import { joinWaitlist } from "@/lib/booking/waitlist";
 
@@ -14,7 +14,7 @@ const JoinSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ctx = getRequestContext();
+    const ctx = await getRequestContextChecked();
     const body = (await request.json()) as unknown;
     const input = JoinSchema.parse(body);
 

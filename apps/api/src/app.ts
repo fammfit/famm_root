@@ -20,13 +20,27 @@ const app = new Hono();
 app.use("*", logger());
 app.use("*", secureHeaders());
 app.use("*", timeout(30_000));
+// CORS: in production CORS_ORIGINS must be set explicitly. In dev we default
+// to localhost. Origins are matched exactly — no wildcards, no fallback to
+// "first allowed origin" for unmatched requests (which would silently echo
+// localhost back to attackers in misconfigured prod).
+const corsAllowedOrigins = (() => {
+  const fromEnv = process.env["CORS_ORIGINS"];
+  if (fromEnv)
+    return fromEnv
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  if (process.env["NODE_ENV"] === "production") {
+    throw new Error("CORS_ORIGINS must be set in production");
+  }
+  return ["http://localhost:3000"];
+})();
+
 app.use(
   "*",
   cors({
-    origin: (origin) => {
-      const allowed = (process.env["CORS_ORIGINS"] ?? "http://localhost:3000").split(",");
-      return allowed.includes(origin) ? origin : (allowed[0] ?? "");
-    },
+    origin: (origin) => (corsAllowedOrigins.includes(origin) ? origin : null),
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
@@ -34,14 +48,42 @@ app.use(
   })
 );
 
-// Rate limiting on public endpoints
+const ipFromCtx = (c: { req: { header: (n: string) => string | undefined } }) =>
+  c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("x-real-ip") ?? "unknown";
+
+// Tight rate limit on auth endpoints.
 app.use(
   "/api/v1/auth/*",
   rateLimiter({
     windowMs: 15 * 60 * 1000,
     limit: 20,
     standardHeaders: "draft-6",
-    keyGenerator: (c) => c.req.header("x-forwarded-for") ?? c.req.header("x-real-ip") ?? "unknown",
+    keyGenerator: ipFromCtx,
+  })
+);
+
+// Broader rate limit on every authenticated API call so payments, AI, and
+// other expensive endpoints are not unbounded. The auth-specific limit
+// above still applies on top of this for /api/v1/auth/*.
+app.use(
+  "/api/v1/*",
+  rateLimiter({
+    windowMs: 60 * 1000,
+    limit: 120,
+    standardHeaders: "draft-6",
+    keyGenerator: ipFromCtx,
+  })
+);
+
+// Even tighter cap for payment-intent / checkout creation: each one consumes
+// Stripe API quota and could be abused.
+app.use(
+  "/api/v1/payments/*",
+  rateLimiter({
+    windowMs: 60 * 1000,
+    limit: 30,
+    standardHeaders: "draft-6",
+    keyGenerator: ipFromCtx,
   })
 );
 
@@ -80,9 +122,17 @@ app.notFound((c) => {
   );
 });
 
-// Error handler
+// Error handler. In production we strip stack traces from logs because they
+// can include file paths, query fragments, and other sensitive data that
+// downstream log aggregators may not be permitted to retain.
 app.onError((err, c) => {
-  console.error("[api] Unhandled error:", err);
+  if (process.env["NODE_ENV"] === "production") {
+    const name = err instanceof Error ? err.name : "Error";
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[api] Unhandled error: ${name}: ${message}`);
+  } else {
+    console.error("[api] Unhandled error:", err);
+  }
   return c.json(
     {
       success: false,
