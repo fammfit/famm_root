@@ -2,7 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens are imported via the root layout: `import "@famm/ui/tokens.css"`. */
+
 :root {
+  /* Legacy brand scale — slated for removal once primitives migrate to semantic tokens. */
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
   --color-brand-500: #3b82f6;

@@ -1,8 +1,9 @@
-export { Button, buttonVariants } from "./components/button";
-export type { ButtonProps } from "./components/button";
+// Primitives (L1)
+export { Button, buttonVariants } from "./components/primitives/button";
+export type { ButtonProps } from "./components/primitives/button";
 
-export { Input } from "./components/input";
-export type { InputProps } from "./components/input";
+export { Input } from "./components/primitives/input";
+export type { InputProps } from "./components/primitives/input";
 
 export {
   Card,
@@ -11,11 +12,21 @@ export {
   CardDescription,
   CardContent,
   CardFooter,
-} from "./components/card";
+} from "./components/primitives/card";
 
-export { Badge, badgeVariants } from "./components/badge";
-export type { BadgeProps } from "./components/badge";
+export { Badge, badgeVariants } from "./components/primitives/badge";
+export type { BadgeProps } from "./components/primitives/badge";
 
-export { Spinner } from "./components/spinner";
+export { Spinner } from "./components/primitives/spinner";
 
+// Patterns (L2) — none promoted yet.
+
+// Hooks
+export { useReducedMotion } from "./hooks/use-reduced-motion";
+
+// Tokens (non-CSS contexts only — prefer Tailwind utilities)
+export { tokens } from "./tokens/tokens";
+export type { Tokens, ThemeName } from "./tokens/tokens";
+
+// Utilities
 export { cn } from "./lib/utils";
