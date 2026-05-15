@@ -1,0 +1,85 @@
+{
+  "$comment": "Spacing tokens. Three axes — inset (padding inward), stack (vertical gap), inline (horizontal gap). Pick by intent, not by visual match. Code source of truth: packages/ui/src/tokens/tokens.json (semantic.space).",
+  "$schema": "https://schemas.famm.fit/design-tokens/v1",
+  "space": {
+    "inset": {
+      "$description": "Padding inside containers. Direction: inward.",
+      "xs": {
+        "value": "8px",
+        "usage": "Tight padding inside small interactive elements (badge, dense button).",
+        "notes": "Tailwind: p-inset-xs. Avoid for any element with a touch target — combine with size to keep >=44x44."
+      },
+      "sm": {
+        "value": "12px",
+        "usage": "Default padding for form controls (Input, small Button).",
+        "notes": "Tailwind: p-inset-sm."
+      },
+      "md": {
+        "value": "16px",
+        "usage": "Default padding for medium containers: chip lists, toast bodies, inline alerts.",
+        "notes": "Tailwind: p-inset-md."
+      },
+      "lg": {
+        "value": "24px",
+        "usage": "Default padding for cards, sheets, modal bodies.",
+        "notes": "Tailwind: p-inset-lg. The Card primitive ships with this by default."
+      },
+      "xl": {
+        "value": "32px",
+        "usage": "Spacious padding for marketing sections, empty-state cards, hero blocks.",
+        "notes": "Tailwind: p-inset-xl. Almost never used in product surfaces below md breakpoint."
+      }
+    },
+    "stack": {
+      "$description": "Gap between vertically stacked elements. Direction: vertical.",
+      "xs": {
+        "value": "8px",
+        "usage": "Gap inside a single semantic group (label + input, title + caption).",
+        "notes": "Tailwind: gap-stack-xs. Default 'inside a group' spacing."
+      },
+      "sm": {
+        "value": "12px",
+        "usage": "Gap between closely related elements (form fields in a row, list items).",
+        "notes": "Tailwind: gap-stack-sm."
+      },
+      "md": {
+        "value": "16px",
+        "usage": "Default gap between blocks: cards in a column, paragraphs in prose, form fields.",
+        "notes": "Tailwind: gap-stack-md."
+      },
+      "lg": {
+        "value": "24px",
+        "usage": "Gap between sections within a single screen.",
+        "notes": "Tailwind: gap-stack-lg."
+      },
+      "xl": {
+        "value": "40px",
+        "usage": "Gap between major page regions, marketing sections.",
+        "notes": "Tailwind: gap-stack-xl. Use sparingly — too much vertical air pushes the primary action below the fold."
+      }
+    },
+    "inline": {
+      "$description": "Gap between horizontally placed elements. Direction: horizontal.",
+      "xs": {
+        "value": "4px",
+        "usage": "Hairline gap between adjacent elements (icon + label inside a button).",
+        "notes": "Tailwind: gap-inline-xs."
+      },
+      "sm": {
+        "value": "8px",
+        "usage": "Default gap between inline buttons, inline tag pills, breadcrumb segments.",
+        "notes": "Tailwind: gap-inline-sm."
+      },
+      "md": {
+        "value": "12px",
+        "usage": "Gap between distinct inline groups (action button + secondary control).",
+        "notes": "Tailwind: gap-inline-md."
+      },
+      "lg": {
+        "value": "16px",
+        "usage": "Spacious inline gap — toolbar groupings, nav item separation.",
+        "notes": "Tailwind: gap-inline-lg."
+      }
+    }
+  }
+}

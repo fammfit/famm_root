@@ -1,0 +1,26 @@
+{
+  "$comment": "Shadow tokens. Elevation has a reason — pick the shadow that matches the layering relationship, not 'how pretty'. Code source of truth: packages/ui/src/tokens/tokens.json (primitive.shadow).",
+  "$schema": "https://schemas.famm.fit/design-tokens/v1",
+  "shadow": {
+    "sm": {
+      "value": "0 1px 2px 0 rgb(15 23 42 / 0.05)",
+      "usage": "Card hairline elevation — distinguishes a raised surface from the page without claiming altitude.",
+      "notes": "Tailwind: shadow-sm. Default for the Card primitive."
+    },
+    "md": {
+      "value": "0 4px 6px -1px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.06)",
+      "usage": "Default raised elevation — used on cards that sit above other content, sticky headers.",
+      "notes": "Tailwind: shadow (the default Tailwind name). Avoid overusing — competing elevations flatten."
+    },
+    "lg": {
+      "value": "0 10px 15px -3px rgb(15 23 42 / 0.10), 0 4px 6px -4px rgb(15 23 42 / 0.05)",
+      "usage": "Dialogs, popovers, dropdowns — surfaces that sit above the scrim layer.",
+      "notes": "Tailwind: shadow-lg. Pair with bg-surface-raised and rounded-card."
+    },
+    "focus": {
+      "value": "0 0 0 3px color-mix(in srgb, var(--color-focus-ring) 45%, transparent)",
+      "usage": "Soft focus glow that complements the ring utility on dense surfaces.",
+      "notes": "Tailwind: shadow-focus. The Button primitive uses the ring utility; this token is for surfaces where the ring would clip."
+    }
+  }
+}

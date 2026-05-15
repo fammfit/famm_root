@@ -1,0 +1,93 @@
+{
+  "$comment": "Motion tokens — durations, easings, and named signature motions. Most product surfaces are still; motion is reserved (principle #9). Reduced-motion users get instant via the @media query — see packages/ui/src/tokens/tokens.css.",
+  "$schema": "https://schemas.famm.fit/design-tokens/v1",
+  "motion": {
+    "duration": {
+      "instant": {
+        "value": "0ms",
+        "usage": "State swaps that must not feel like animation: filter toggles, accordion open without ceremony.",
+        "notes": "Also the reduced-motion fallback for fast/base/slow."
+      },
+      "fast": {
+        "value": "120ms",
+        "usage": "Hover and focus transitions, button press, focus ring fade-in.",
+        "notes": "Tailwind: duration-fast."
+      },
+      "base": {
+        "value": "200ms",
+        "usage": "Default for component state changes, modal/sheet open, toast in/out.",
+        "notes": "Tailwind: duration-base. The 'default' duration when no other applies."
+      },
+      "slow": {
+        "value": "320ms",
+        "usage": "Page transitions, signature moments (PR celebrate, set complete draw).",
+        "notes": "Tailwind: duration-slow. Use sparingly — slow animations test patience."
+      }
+    },
+    "easing": {
+      "standard": {
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "usage": "Default easing for any motion — decelerates into rest.",
+        "notes": "Tailwind: ease-standard."
+      },
+      "emphasized": {
+        "value": "cubic-bezier(0.3, 0, 0, 1.2)",
+        "usage": "Signature moments only — subtle overshoot at the end. PR celebrate, completion checkmark.",
+        "notes": "Tailwind: ease-emphasized. Never as the default on routine transitions."
+      },
+      "linear": {
+        "value": "linear",
+        "usage": "Progress indicators where the rate must feel constant — timer rings, loading bars.",
+        "notes": "Tailwind: ease-linear (Tailwind default)."
+      }
+    },
+    "signature": {
+      "$description": "Named motions used across the product. Use these by name; do not redefine them. Each has a reduced-motion variant.",
+      "stateSnap": {
+        "value": {
+          "duration": "0ms",
+          "easing": "linear",
+          "properties": []
+        },
+        "usage": "Instant change. Accordion open without ceremony, filter toggle.",
+        "notes": "Reduced-motion variant: identical (already instant)."
+      },
+      "stateFade": {
+        "value": {
+          "duration": "120ms",
+          "easing": "standard",
+          "properties": ["opacity"]
+        },
+        "usage": "Tooltip in/out, focus state changes, quiet transitions.",
+        "notes": "Reduced-motion variant: instant opacity flip."
+      },
+      "sheetEnter": {
+        "value": {
+          "duration": "200ms",
+          "easing": "standard",
+          "properties": ["transform", "opacity"]
+        },
+        "usage": "Bottom sheet / side sheet open animation — slide + fade.",
+        "notes": "Reduced-motion variant: fade-only (no translate)."
+      },
+      "prCelebrate": {
+        "value": {
+          "duration": "320ms",
+          "easing": "emphasized",
+          "properties": ["transform", "color"]
+        },
+        "usage": "Personal-record moment. Used once per achievement. Scale 1 -> 1.06 -> 1; color text.primary -> signal.pr.",
+        "notes": "Reduced-motion variant: color-only, no scale. Paired with haptic on touch viewports."
+      },
+      "setComplete": {
+        "value": {
+          "duration": "200ms",
+          "easing": "standard",
+          "properties": ["stroke-dashoffset", "transform"]
+        },
+        "usage": "Set-complete checkbox: checkmark draws + slight scale on the fill.",
+        "notes": "Reduced-motion variant: instant fill, no checkmark draw."
+      }
+    }
+  }
+}

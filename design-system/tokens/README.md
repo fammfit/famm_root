@@ -1,9 +1,31 @@
 # Tokens
 
-Documentation surface for the token catalog. The **source of truth** is
+Documentation surface for the token catalog. The **code source of
+truth** is
 [`../../packages/ui/src/tokens/tokens.json`](../../packages/ui/src/tokens/tokens.json);
 the generated CSS variables and TS exports live next to it. This folder
 explains *what each token means* and *when to use it*.
+
+## Starter token files
+
+The per-category JSON files in this folder are the **readable contract**
+for designers and AI tools. Each leaf carries `value`, `usage`, and
+`notes`. The path through the tree is the semantic name
+(`color.text.primary`, `space.inset.md`, `motion.signature.prCelebrate`).
+
+| File | What it covers |
+|------|----------------|
+| `colors.json` | Surface, text, accent, signal, border, focus ring (light + dark). |
+| `typography.json` | Font families, size scale, weights, line heights, letter spacing, features. |
+| `spacing.json` | Three axes — `inset` (padding), `stack` (vertical gap), `inline` (horizontal gap). |
+| `radius.json` | `control`, `card`, `pill` + `none`. |
+| `shadows.json` | `sm`, `md`, `lg`, `focus`. |
+| `motion.json` | Durations, easings, named signature motions. |
+| `breakpoints.json` | Viewport breakpoints (`sm`–`2xl`) + container max-widths. |
+
+These files document the system; they do not regenerate the code
+package. If a value differs between a starter file and
+`tokens.json`, the code file wins — fix the doc, then file a ticket.
 
 ## How tokens are organized
 

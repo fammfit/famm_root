@@ -1,0 +1,64 @@
+{
+  "$comment": "Breakpoint tokens. Semantic, not device names. Use the named breakpoint that matches the *reason* for the change, not the device you tested on. Code source of truth: packages/ui/src/tokens/tokens.json (semantic.container) and packages/ui/tailwind.config.ts (screens).",
+  "$schema": "https://schemas.famm.fit/design-tokens/v1",
+  "breakpoint": {
+    "base": {
+      "value": "0px",
+      "usage": "The default. Styles without a breakpoint prefix target this — the smallest supported viewport.",
+      "notes": "Smallest first-class target is 375 x 667 (iPhone SE). 320px must not break but isn't optimized for."
+    },
+    "sm": {
+      "value": "480px",
+      "usage": "Large phones / phablets. Two-column lists, expanded toolbars on tall phones.",
+      "notes": "Tailwind: sm: prefix."
+    },
+    "md": {
+      "value": "768px",
+      "usage": "Tablets, foldables. Side panels appear, tables can show all columns, modals widen.",
+      "notes": "Tailwind: md: prefix. Touch is still the assumed input here."
+    },
+    "lg": {
+      "value": "1024px",
+      "usage": "Small laptops. Pointer input is assumed at this size and above; hover affordances may appear here.",
+      "notes": "Tailwind: lg: prefix. Density may step down by one stack-size at lg+."
+    },
+    "xl": {
+      "value": "1280px",
+      "usage": "Standard desktop. Three- and four-column dashboards, persistent sidebar.",
+      "notes": "Tailwind: xl: prefix."
+    },
+    "2xl": {
+      "value": "1536px",
+      "usage": "Wide desktop / external monitor. Avoid filling all the width — content max-widths apply.",
+      "notes": "Tailwind: 2xl: prefix. Container widths cap below the raw viewport at this size."
+    }
+  },
+  "container": {
+    "$description": "Maximum content widths for page-level surfaces. Pages reference these — they never invent a max-width.",
+    "sm": {
+      "value": "640px",
+      "usage": "Reading surfaces: marketing body sections, blog posts, help articles.",
+      "notes": "Tailwind: max-w-container-sm."
+    },
+    "md": {
+      "value": "768px",
+      "usage": "Narrow product surfaces: settings pages, single-column forms.",
+      "notes": "Tailwind: max-w-container-md."
+    },
+    "lg": {
+      "value": "1024px",
+      "usage": "Default product container: dashboards on small laptops.",
+      "notes": "Tailwind: max-w-container-lg."
+    },
+    "xl": {
+      "value": "1280px",
+      "usage": "Wide product container: dashboards on desktop.",
+      "notes": "Tailwind: max-w-container-xl."
+    },
+    "2xl": {
+      "value": "1536px",
+      "usage": "Reserved for marketing pages and content galleries.",
+      "notes": "Tailwind: max-w-container-2xl. Almost never the right answer in product."
+    }
+  }
+}
