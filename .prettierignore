@@ -1,0 +1,13 @@
+node_modules
+.next
+dist
+.turbo
+coverage
+*.min.js
+*.min.css
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+.env*
+generated/
+packages/db/node_modules/.prisma
