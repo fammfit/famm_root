@@ -5,6 +5,7 @@ import { apiSuccess, apiError, handleError } from "@/lib/api-response";
 import { CreateBookingSchema } from "@famm/shared";
 import { validateBookingRules } from "@/lib/booking/rules";
 import { isSlotAvailable } from "@/lib/booking/availability";
+import { publishEvent } from "@/lib/booking/realtime";
 
 export async function GET(request: NextRequest) {
   try {
@@ -142,6 +143,24 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    await Promise.all([
+      publishEvent(ctx.tenantId, {
+        type: "BOOKING_CREATED",
+        bookingId: booking.id,
+        serviceId: booking.serviceId,
+        startAt: booking.startAt.toISOString(),
+        endAt: booking.endAt.toISOString(),
+      }),
+      publishEvent(ctx.tenantId, {
+        type: "SLOT_UPDATED",
+        serviceId: booking.serviceId,
+        trainerId: booking.trainerId ?? undefined,
+        startAt: booking.startAt.toISOString(),
+        endAt: booking.endAt.toISOString(),
+        available: false,
+      }),
+    ]);
 
     return apiSuccess(booking, 201);
   } catch (err) {
