@@ -14,6 +14,7 @@
     "@famm/db": "*",
     "@famm/shared": "*",
     "@famm/types": "*",
+    "@famm/ui": "*",
     "next": "14.2.3",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

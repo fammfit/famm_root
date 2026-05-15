@@ -4,6 +4,18 @@
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./tailwind.config": "./tailwind.config.ts",
+    "./tokens.css": "./src/tokens/tokens.css",
+    "./tokens": {
+      "types": "./src/tokens/tokens.ts",
+      "default": "./src/tokens/tokens.ts"
+    }
+  },
   "scripts": {
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",

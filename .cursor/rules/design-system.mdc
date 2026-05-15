@@ -1,0 +1,68 @@
+---
+description: FAMM design system rules — apply whenever generating or editing UI code.
+globs:
+  - "apps/web/**/*.{ts,tsx,css}"
+  - "packages/ui/**/*.{ts,tsx,css}"
+alwaysApply: true
+---
+
+# FAMM Design System — AI Rules
+
+You are editing the FAMM fitness app. The design system is the contract.
+Source of truth: `docs/DESIGN_SYSTEM.md`.
+
+## Hard rules (lint will fail your PR if you break these)
+
+1. No raw color literals. No `#abcdef`, no `rgb(...)`, no `hsl(...)`.
+2. No raw pixel literals. No `16px`, no `padding: 12`, no magic numbers.
+3. No inline `style={{ ... }}` on JSX outside `packages/ui/src/components/primitives/**`.
+4. No new component library or icon set. We use `@famm/ui` + `lucide-react`.
+
+## Reuse before you create
+
+Before writing any new component:
+
+1. Search `packages/ui/src/components/primitives` and
+   `packages/ui/src/components/patterns` for an existing match.
+2. If close-but-not-quite, extend the existing variant (cva) — do not fork.
+3. If genuinely new:
+   - Cross-feature reuse → propose as L2 pattern in `packages/ui/...patterns/`.
+   - Feature-specific → place in `apps/web/src/components/<feature>/` as L3.
+   - New atomic primitive → STOP. Ask the user before adding to L1.
+
+## Tokens and styling
+
+Use Tailwind classes backed by semantic tokens. Allowed families:
+
+- Colors: `surface{-raised,-sunken,-overlay}`, `text-{primary,secondary,muted,inverse,onAccent}`,
+  `accent{,-hover,-subtle}`, `signal-{success,danger,warning,pr}`,
+  `border{,-subtle,-strong}`.
+- Spacing: `p-inset-{xs,sm,md,lg,xl}`, `gap-stack-{xs..xl}`, `gap-inline-{xs..lg}`.
+- Radius: `rounded-control`, `rounded-card`, `rounded-pill`.
+- Shadow: `shadow-sm`, `shadow`, `shadow-lg`, `shadow-focus`.
+- Motion: `duration-fast|base|slow`, `ease-standard|emphasized`.
+- Type: `font-sans`, `font-mono`.
+
+If the token you need doesn't exist, add it in `packages/ui/src/tokens/tokens.json`
+and surface it in `packages/ui/tailwind.config.ts` in the same change.
+Mention the new token in the PR description.
+
+## Accessibility (always)
+
+- Interactive elements need a visible focus ring (default is the `ring-DEFAULT` color).
+- Touch targets ≥ 44×44 on touch viewports.
+- Every form input gets a `<label>` (or the `FormField` pattern once it lands).
+- Icons that convey meaning carry `aria-label`; decorative icons get `aria-hidden`.
+- Animations over 200ms or involving translation must branch on
+  `useReducedMotion()` from `@famm/ui`.
+
+## Responsive
+
+- Mobile-first. Default styles target `<sm`; add breakpoints upward (`sm:`, `md:`, `lg:`).
+- Use layout primitives (`Stack`, `Cluster`, `Grid` when they exist) rather than
+  bespoke media queries inside feature components.
+
+## When unsure
+
+Stop and ask. Do not guess between two valid patterns. Do not invent a
+token name, color value, or component name.
