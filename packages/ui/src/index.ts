@@ -12,7 +12,9 @@ export {
   CardDescription,
   CardContent,
   CardFooter,
+  cardVariants,
 } from "./components/primitives/card";
+export type { CardProps } from "./components/primitives/card";
 
 export { Badge, badgeVariants } from "./components/primitives/badge";
 export type { BadgeProps } from "./components/primitives/badge";

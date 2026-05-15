@@ -34,23 +34,29 @@ If a screen has more than one Card style, one of them is wrong.
 
 ## 2. Variants
 
-There is currently **one** visual variant — the default elevated surface.
-The compound API is the variation surface: combine slots, don't combine
-visual styles.
+```
+variant: default | interactive
+```
 
-```
-Variant: default   (elevated raised surface, hairline border)
-```
+- `default` — elevated raised surface, hairline border, soft shadow.
+  Non-interactive container.
+- `interactive` — adds a hover lift (slightly stronger shadow + border)
+  for cards whose entire surface is a single action target. The Card
+  itself does **not** become a `<button>` — wrap the title or the
+  whole content in a `Link` (or a Button) to take the action. The
+  hover affordance is the visual; semantics come from the child.
+
+Both variants gain a `focus-within` ring on their border when any
+descendant has focus — the only visible focus cue on touch viewports
+when the focused descendant has no border of its own (per §5).
 
 Reserved for future addition (not yet shipped):
 
-- `interactive` — when the entire card is a single action target (wraps
-  in `<button>` / `<a>`, adds hover lift + focus ring).
 - `flat` — for nested cards on already-raised surfaces.
 - `inline` — when a "card" lives inside a list and inherits the parent's
   surface.
 
-To add a variant: convert `Card` to `cva()` in
+To add a variant: extend the `cva()` block in
 `packages/ui/src/components/primitives/card.tsx` and document here. Do
 not introduce a sibling component.
 
