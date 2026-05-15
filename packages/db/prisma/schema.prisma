@@ -9,7 +9,7 @@ datasource db {
   extensions = [pgvector(map: "vector"), pg_trgm]
 }
 
-// ─── Enums ──────────────────────────────────────────────────────────────────
+// ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum TenantStatus {
   ACTIVE
@@ -40,6 +40,13 @@ enum UserStatus {
   INACTIVE
   PENDING_VERIFICATION
   SUSPENDED
+}
+
+enum AuthMethod {
+  PASSWORD
+  MAGIC_LINK
+  SMS_OTP
+  OAUTH
 }
 
 enum BookingStatus {
@@ -95,13 +102,22 @@ enum EventType {
   REFUND_ISSUED
   USER_CREATED
   USER_INVITED
+  USER_ROLE_CHANGED
+  USER_DEACTIVATED
+  SESSION_CREATED
+  SESSION_REVOKED
+  MAGIC_LINK_SENT
+  SMS_OTP_SENT
+  INVITE_CREATED
+  INVITE_ACCEPTED
+  INVITE_REVOKED
   SERVICE_CREATED
   AVAILABILITY_UPDATED
   AI_CONVERSATION_STARTED
   AI_CONVERSATION_ENDED
 }
 
-// ─── Tenant (root aggregate) ─────────────────────────────────────────────────
+// ─── Tenant ───────────────────────────────────────────────────────────────────
 
 model Tenant {
   id          String       @id @default(cuid())
@@ -110,147 +126,118 @@ model Tenant {
   status      TenantStatus @default(TRIAL)
   plan        TenantPlan   @default(FREE)
 
-  // Stripe
-  stripeAccountId      String? @unique
-  stripeCustomerId     String? @unique
-  subscriptionId       String? @unique
-  subscriptionEndsAt   DateTime?
+  stripeAccountId    String? @unique
+  stripeCustomerId   String? @unique
+  subscriptionId     String? @unique
+  subscriptionEndsAt DateTime?
 
-  // Branding (white-label)
-  branding    TenantBranding?
+  branding TenantBranding?
+  settings TenantSettings?
 
-  // Settings
-  settings    TenantSettings?
+  users          TenantMembership[]
+  locations      Location[]
+  services       Service[]
+  bookings       Booking[]
+  availability   AvailabilityRule[]
+  blockedPeriods BlockedPeriod[]
+  webhooks       Webhook[]
+  apiKeys        ApiKey[]
+  auditLogs      AuditLog[]
+  events         DomainEvent[]
+  aiMemories     AiMemory[]
+  notifications  NotificationTemplate[]
+  inviteTokens   InviteToken[]
 
-  // Relations
-  users             TenantMembership[]
-  locations         Location[]
-  services          Service[]
-  bookings          Booking[]
-  availability      AvailabilityRule[]
-  blockedPeriods    BlockedPeriod[]
-  webhooks          Webhook[]
-  apiKeys           ApiKey[]
-  auditLogs         AuditLog[]
-  events            DomainEvent[]
-  aiMemories        AiMemory[]
-  notifications     NotificationTemplate[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([slug])
   @@index([status])
 }
 
 model TenantBranding {
-  id            String  @id @default(cuid())
-  tenantId      String  @unique
-  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  logoUrl       String?
-  faviconUrl    String?
-  primaryColor  String  @default("#000000")
-  secondaryColor String @default("#ffffff")
-  accentColor   String  @default("#3B82F6")
-  fontFamily    String  @default("Inter")
-  customDomain  String? @unique
-  customCss     String?
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String  @id @default(cuid())
+  tenantId       String  @unique
+  tenant         Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  logoUrl        String?
+  faviconUrl     String?
+  primaryColor   String  @default("#000000")
+  secondaryColor String  @default("#ffffff")
+  accentColor    String  @default("#3B82F6")
+  fontFamily     String  @default("Inter")
+  customDomain   String? @unique
+  customCss      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model TenantSettings {
-  id                    String  @id @default(cuid())
-  tenantId              String  @unique
-  tenant                Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  timezone              String  @default("UTC")
-  currency              String  @default("USD")
-  locale                String  @default("en-US")
-
-  // Booking config
-  bookingLeadTimeMinutes  Int    @default(60)
-  bookingWindowDays       Int    @default(60)
-  cancellationWindowHours Int    @default(24)
-  maxConcurrentBookings   Int    @default(1)
+  id                      String  @id @default(cuid())
+  tenantId                String  @unique
+  tenant                  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  timezone                String  @default("UTC")
+  currency                String  @default("USD")
+  locale                  String  @default("en-US")
+  bookingLeadTimeMinutes  Int     @default(60)
+  bookingWindowDays       Int     @default(60)
+  cancellationWindowHours Int     @default(24)
+  maxConcurrentBookings   Int     @default(1)
   requirePaymentUpfront   Boolean @default(false)
-
-  // Notifications
-  emailNotifications    Boolean @default(true)
-  smsNotifications      Boolean @default(false)
-
-  // AI
-  aiEnabled             Boolean @default(true)
-  aiPersonaName         String  @default("Assistant")
-  aiSystemPrompt        String?
-
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  emailNotifications      Boolean @default(true)
+  smsNotifications        Boolean @default(false)
+  aiEnabled               Boolean @default(true)
+  aiPersonaName           String  @default("Assistant")
+  aiSystemPrompt          String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }
 
-// ─── Users ───────────────────────────────────────────────────────────────────
+// ─── Users ────────────────────────────────────────────────────────────────────
 
 model User {
-  id            String      @id @default(cuid())
-  email         String      @unique
+  id            String     @id @default(cuid())
+  email         String     @unique
   emailVerified DateTime?
   passwordHash  String?
-  phone         String?
+  phone         String?    @unique
   phoneVerified DateTime?
-
   firstName     String
   lastName      String
   avatarUrl     String?
-  timezone      String      @default("UTC")
-  status        UserStatus  @default(PENDING_VERIFICATION)
+  timezone      String     @default("UTC")
+  status        UserStatus @default(PENDING_VERIFICATION)
+  isSuperAdmin  Boolean    @default(false)
 
-  // Global super-admin flag (no tenant)
-  isSuperAdmin  Boolean     @default(false)
-
-  // Auth
-  sessions      Session[]
-  accounts      OAuthAccount[]
-
-  // Tenant memberships (user can belong to multiple tenants)
-  memberships   TenantMembership[]
-
-  // Trainer profile (optional)
-  trainerProfile TrainerProfile?
-
-  // Client bookings
-  bookingsAsClient Booking[] @relation("ClientBookings")
-
-  // AI memory (per-user, isolated)
-  aiMemories    AiMemory[]
+  sessions        Session[]
+  accounts        OAuthAccount[]
+  memberships     TenantMembership[]
+  trainerProfile  TrainerProfile?
+  bookingsAsClient Booking[]       @relation("ClientBookings")
+  aiMemories      AiMemory[]
   aiConversations AiConversation[]
+  sentInvites     InviteToken[]    @relation("InviteSender")
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([phone])
 }
 
 model TenantMembership {
-  id        String   @id @default(cuid())
-  tenantId  String
-  userId    String
-  role      UserRole @default(CLIENT)
-
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  invitedBy String?
-  invitedAt DateTime?
-  joinedAt  DateTime @default(now())
-
-  // Tenant-scoped permissions override
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String
+  role        UserRole @default(CLIENT)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy   String?
+  invitedAt   DateTime?
+  joinedAt    DateTime @default(now())
+  // Explicit permission grants beyond role defaults
   permissions String[] @default([])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([tenantId, userId])
   @@index([tenantId])
@@ -258,29 +245,43 @@ model TenantMembership {
 }
 
 model Session {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId     String?
+  authMethod   AuthMethod @default(PASSWORD)
 
-  token        String   @unique
-  refreshToken String?  @unique
+  // Stored as hashed value; raw refresh token returned to client once
+  refreshTokenHash String? @unique
+
   expiresAt    DateTime
+
+  // Device fingerprinting
+  deviceId     String?
+  deviceName   String?
 
   ipAddress    String?
   userAgent    String?
 
+  // Explicit revocation
+  isRevoked     Boolean  @default(false)
+  revokedAt     DateTime?
+  revokedReason String?
+
+  lastActiveAt DateTime @default(now())
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([userId])
-  @@index([token])
+  @@index([userId, tenantId])
+  @@index([refreshTokenHash])
+  @@index([isRevoked, expiresAt])
 }
 
 model OAuthAccount {
-  id                String  @id @default(cuid())
+  id                String   @id @default(cuid())
   userId            String
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   provider          String
   providerAccountId String
   accessToken       String?
@@ -289,7 +290,6 @@ model OAuthAccount {
   scope             String?
   tokenType         String?
   idToken           String?
-
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -297,54 +297,91 @@ model OAuthAccount {
   @@index([userId])
 }
 
-// ─── Trainer Hierarchy ───────────────────────────────────────────────────────
+// ─── Auth Tokens ─────────────────────────────────────────────────────────────
+
+model MagicLinkToken {
+  id        String   @id @default(cuid())
+  email     String
+  tenantId  String
+  // Raw token is sent to user; only hash stored here
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  requestIp String?
+  createdAt DateTime @default(now())
+
+  @@index([email, tenantId])
+  @@index([expiresAt])
+}
+
+model SmsOtp {
+  id         String   @id @default(cuid())
+  phone      String
+  tenantId   String
+  codeHash   String
+  attempts   Int      @default(0)
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  requestIp  String?
+  createdAt  DateTime @default(now())
+
+  @@index([phone, tenantId])
+  @@index([expiresAt])
+}
+
+model InviteToken {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email       String
+  role        UserRole @default(CLIENT)
+  tokenHash   String   @unique
+  invitedBy   String
+  inviter     User     @relation("InviteSender", fields: [invitedBy], references: [id])
+  message     String?
+  metadata    Json?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  revokedBy   String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, email])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+// ─── Trainer Hierarchy ────────────────────────────────────────────────────────
 
 model TrainerProfile {
-  id          String  @id @default(cuid())
-  userId      String  @unique
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  bio         String?
-  specialties String[]
-  certifications String[]
-
-  // Hierarchy: a trainer can have a lead trainer
-  leadTrainerId String?
-  leadTrainer   TrainerProfile?  @relation("TrainerHierarchy", fields: [leadTrainerId], references: [id])
-  subordinates  TrainerProfile[] @relation("TrainerHierarchy")
-
-  // Stripe Connect for direct payouts
-  stripeConnectAccountId String? @unique
-  stripeConnectOnboarded Boolean @default(false)
-
-  // Commission rate (overrides tenant default)
-  commissionRate Float?
-
-  // Availability
-  availability     AvailabilityRule[]
-  blockedPeriods   BlockedPeriod[]
-
-  // Services this trainer can deliver
-  services  TrainerService[]
-
-  // Bookings as trainer
-  bookings  Booking[] @relation("TrainerBookings")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                     String          @id @default(cuid())
+  userId                 String          @unique
+  user                   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio                    String?
+  specialties            String[]
+  certifications         String[]
+  leadTrainerId          String?
+  leadTrainer            TrainerProfile? @relation("TrainerHierarchy", fields: [leadTrainerId], references: [id])
+  subordinates           TrainerProfile[] @relation("TrainerHierarchy")
+  stripeConnectAccountId String?         @unique
+  stripeConnectOnboarded Boolean         @default(false)
+  commissionRate         Float?
+  availability           AvailabilityRule[]
+  blockedPeriods         BlockedPeriod[]
+  services               TrainerService[]
+  bookings               Booking[]       @relation("TrainerBookings")
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 
   @@index([userId])
   @@index([leadTrainerId])
 }
 
 model TrainerService {
-  trainerId String
-  serviceId String
-
-  trainer   TrainerProfile @relation(fields: [trainerId], references: [id], onDelete: Cascade)
-  service   Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  // Trainer-specific pricing override
+  trainerId     String
+  serviceId     String
+  trainer       TrainerProfile @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   priceOverride Float?
 
   @@id([trainerId, serviceId])
@@ -353,31 +390,26 @@ model TrainerService {
 // ─── Location ────────────────────────────────────────────────────────────────
 
 model Location {
-  id          String  @id @default(cuid())
-  tenantId    String
-  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  name        String
-  address     String?
-  city        String?
-  state       String?
-  country     String  @default("US")
-  postalCode  String?
-  timezone    String  @default("UTC")
-
-  latitude    Float?
-  longitude   Float?
-
-  isActive    Boolean @default(true)
-  isVirtual   Boolean @default(false)
-
-  services    Service[]
-  availability AvailabilityRule[]
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name           String
+  address        String?
+  city           String?
+  state          String?
+  country        String   @default("US")
+  postalCode     String?
+  timezone       String   @default("UTC")
+  latitude       Float?
+  longitude      Float?
+  isActive       Boolean  @default(true)
+  isVirtual      Boolean  @default(false)
+  services       Service[]
+  availability   AvailabilityRule[]
   blockedPeriods BlockedPeriod[]
-  bookings    Booking[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  bookings       Booking[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([tenantId])
 }
@@ -385,75 +417,55 @@ model Location {
 // ─── Services ────────────────────────────────────────────────────────────────
 
 model Service {
-  id          String      @id @default(cuid())
-  tenantId    String
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  locationId  String?
-  location    Location?   @relation(fields: [locationId], references: [id])
-
-  name        String
-  description String?
-  type        ServiceType @default(INDIVIDUAL)
-
-  durationMinutes    Int    @default(60)
-  maxParticipants    Int    @default(1)
-  bufferBeforeMinutes Int   @default(0)
-  bufferAfterMinutes  Int   @default(0)
-
-  // Pricing
-  basePrice   Float   @default(0)
-  currency    String  @default("USD")
-
-  // Dynamic pricing config (JSON blob)
+  id                   String      @id @default(cuid())
+  tenantId             String
+  tenant               Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  locationId           String?
+  location             Location?   @relation(fields: [locationId], references: [id])
+  name                 String
+  description          String?
+  type                 ServiceType @default(INDIVIDUAL)
+  durationMinutes      Int         @default(60)
+  maxParticipants      Int         @default(1)
+  bufferBeforeMinutes  Int         @default(0)
+  bufferAfterMinutes   Int         @default(0)
+  basePrice            Float       @default(0)
+  currency             String      @default("USD")
   dynamicPricingConfig Json?
-
-  isActive    Boolean @default(true)
-  isPublic    Boolean @default(true)
-
-  // Booking rules (JSON blob for flexibility)
-  bookingRules Json?
-
-  trainers    TrainerService[]
-  availability AvailabilityRule[]
-  bookings    Booking[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive             Boolean     @default(true)
+  isPublic             Boolean     @default(true)
+  bookingRules         Json?
+  trainers             TrainerService[]
+  availability         AvailabilityRule[]
+  bookings             Booking[]
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 
   @@index([tenantId])
   @@index([tenantId, isActive])
 }
 
-// ─── Availability Engine ─────────────────────────────────────────────────────
+// ─── Availability ────────────────────────────────────────────────────────────
 
 model AvailabilityRule {
-  id          String    @id @default(cuid())
-  tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  // Scope: can apply at trainer, service, or location level
-  trainerId   String?
-  trainer     TrainerProfile? @relation(fields: [trainerId], references: [id])
-  serviceId   String?
-  service     Service?        @relation(fields: [serviceId], references: [id])
-  locationId  String?
-  location    Location?       @relation(fields: [locationId], references: [id])
-
-  // Recurring weekly rule
-  dayOfWeek   DayOfWeek
-  startTime   String    // "HH:MM" in location/trainer timezone
-  endTime     String    // "HH:MM"
-  timezone    String    @default("UTC")
-
-  isActive    Boolean   @default(true)
-
-  // Validity window
-  validFrom   DateTime?
-  validUntil  DateTime?
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String          @id @default(cuid())
+  tenantId   String
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  trainerId  String?
+  trainer    TrainerProfile? @relation(fields: [trainerId], references: [id])
+  serviceId  String?
+  service    Service?        @relation(fields: [serviceId], references: [id])
+  locationId String?
+  location   Location?       @relation(fields: [locationId], references: [id])
+  dayOfWeek  DayOfWeek
+  startTime  String
+  endTime    String
+  timezone   String          @default("UTC")
+  isActive   Boolean         @default(true)
+  validFrom  DateTime?
+  validUntil DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   @@index([tenantId])
   @@index([tenantId, trainerId])
@@ -462,85 +474,60 @@ model AvailabilityRule {
 }
 
 model BlockedPeriod {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  trainerId   String?
-  trainer     TrainerProfile? @relation(fields: [trainerId], references: [id])
-  locationId  String?
-  location    Location?       @relation(fields: [locationId], references: [id])
-
-  reason      String?
-  startAt     DateTime
-  endAt       DateTime
-  timezone    String   @default("UTC")
-
-  // Recurring blocks
-  isRecurring Boolean  @default(false)
-  recurrenceRule String? // iCal RRULE string
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String          @id @default(cuid())
+  tenantId       String
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  trainerId      String?
+  trainer        TrainerProfile? @relation(fields: [trainerId], references: [id])
+  locationId     String?
+  location       Location?       @relation(fields: [locationId], references: [id])
+  reason         String?
+  startAt        DateTime
+  endAt          DateTime
+  timezone       String          @default("UTC")
+  isRecurring    Boolean         @default(false)
+  recurrenceRule String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([tenantId])
   @@index([tenantId, startAt, endAt])
   @@index([trainerId, startAt, endAt])
 }
 
-// ─── Booking Engine ──────────────────────────────────────────────────────────
+// ─── Booking ─────────────────────────────────────────────────────────────────
 
 model Booking {
-  id          String        @id @default(cuid())
-  tenantId    String
-  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  clientId    String
-  client      User          @relation("ClientBookings", fields: [clientId], references: [id])
-
-  trainerId   String?
-  trainer     TrainerProfile? @relation("TrainerBookings", fields: [trainerId], references: [id])
-
-  serviceId   String
-  service     Service       @relation(fields: [serviceId], references: [id])
-
-  locationId  String?
-  location    Location?     @relation(fields: [locationId], references: [id])
-
-  status      BookingStatus @default(PENDING)
-
-  // Time (always UTC)
-  startAt     DateTime
-  endAt       DateTime
-  timezone    String        // Client's local timezone at time of booking
-
-  // Pricing snapshot at booking time
-  price       Float
-  currency    String        @default("USD")
-
-  // Payment
-  paymentStatus PaymentStatus @default(UNPAID)
-  stripePaymentIntentId String? @unique
-
-  // Metadata
-  notes       String?
-  internalNotes String?
-
-  // Cancellation
-  cancelledAt  DateTime?
-  cancellationReason String?
-  cancelledBy  String?
-
-  // Reschedule history
-  rescheduledFromId String?
-  rescheduledFrom   Booking? @relation("RescheduleChain", fields: [rescheduledFromId], references: [id])
-  rescheduledTo     Booking[] @relation("RescheduleChain")
-
-  // Reminders sent
-  reminders   BookingReminder[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String        @id @default(cuid())
+  tenantId              String
+  tenant                Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientId              String
+  client                User          @relation("ClientBookings", fields: [clientId], references: [id])
+  trainerId             String?
+  trainer               TrainerProfile? @relation("TrainerBookings", fields: [trainerId], references: [id])
+  serviceId             String
+  service               Service       @relation(fields: [serviceId], references: [id])
+  locationId            String?
+  location              Location?     @relation(fields: [locationId], references: [id])
+  status                BookingStatus @default(PENDING)
+  startAt               DateTime
+  endAt                 DateTime
+  timezone              String
+  price                 Float
+  currency              String        @default("USD")
+  paymentStatus         PaymentStatus @default(UNPAID)
+  stripePaymentIntentId String?       @unique
+  notes                 String?
+  internalNotes         String?
+  cancelledAt           DateTime?
+  cancellationReason    String?
+  cancelledBy           String?
+  rescheduledFromId     String?
+  rescheduledFrom       Booking?      @relation("RescheduleChain", fields: [rescheduledFromId], references: [id])
+  rescheduledTo         Booking[]     @relation("RescheduleChain")
+  reminders             BookingReminder[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   @@index([tenantId])
   @@index([tenantId, clientId])
@@ -551,39 +538,31 @@ model Booking {
 }
 
 model BookingReminder {
-  id          String   @id @default(cuid())
+  id          String              @id @default(cuid())
   bookingId   String
-  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-
+  booking     Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   channel     NotificationChannel
   scheduledAt DateTime
   sentAt      DateTime?
-
-  createdAt   DateTime @default(now())
+  createdAt   DateTime            @default(now())
 }
 
-// ─── Domain Events (event sourcing) ─────────────────────────────────────────
+// ─── Domain Events ────────────────────────────────────────────────────────────
 
 model DomainEvent {
-  id          String    @id @default(cuid())
-  tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  type        EventType
-  aggregateId String
-  aggregateType String
-
-  payload     Json
-  metadata    Json?
-
-  // For idempotency
-  idempotencyKey String? @unique
-
-  processedAt DateTime?
-  failedAt    DateTime?
-  retryCount  Int       @default(0)
-
-  occurredAt  DateTime  @default(now())
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type           EventType
+  aggregateId    String
+  aggregateType  String
+  payload        Json
+  metadata       Json?
+  idempotencyKey String?   @unique
+  processedAt    DateTime?
+  failedAt       DateTime?
+  retryCount     Int       @default(0)
+  occurredAt     DateTime  @default(now())
 
   @@index([tenantId])
   @@index([tenantId, type])
@@ -591,90 +570,72 @@ model DomainEvent {
   @@index([occurredAt])
 }
 
-// ─── AI Memory (per-user, per-tenant isolated) ────────────────────────────────
+// ─── AI ───────────────────────────────────────────────────────────────────────
 
 model AiMemory {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  content     String
-  // pgvector embedding — 1536 dims for text-embedding-3-small
-  embedding   Unsupported("vector(1536)")?
-
-  memoryType  String   @default("general")
-  importance  Float    @default(0.5)
-
-  expiresAt   DateTime?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content    String
+  embedding  Unsupported("vector(1536)")?
+  memoryType String   @default("general")
+  importance Float    @default(0.5)
+  expiresAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([tenantId, userId])
   @@index([tenantId, userId, memoryType])
 }
 
 model AiConversation {
-  id          String   @id @default(cuid())
-  tenantId    String
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  channel     String   @default("web") // web | sms | voice
-
-  messages    AiMessage[]
-
-  summary     String?
-  // Embedding of conversation summary for RAG
+  id               String     @id @default(cuid())
+  tenantId         String
+  userId           String
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel          String     @default("web")
+  messages         AiMessage[]
+  summary          String?
   summaryEmbedding Unsupported("vector(1536)")?
-
-  metadata    Json?
-
-  startedAt   DateTime @default(now())
-  endedAt     DateTime?
+  metadata         Json?
+  startedAt        DateTime   @default(now())
+  endedAt          DateTime?
 
   @@index([tenantId, userId])
   @@index([tenantId])
 }
 
 model AiMessage {
-  id              String         @id @default(cuid())
-  conversationId  String
-  conversation    AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  role            String         // user | assistant | system | tool
-  content         String
-  toolCalls       Json?
-  toolResults     Json?
-
-  // Token tracking for billing
-  inputTokens     Int?
-  outputTokens    Int?
-
-  createdAt       DateTime       @default(now())
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  toolCalls      Json?
+  toolResults    Json?
+  inputTokens    Int?
+  outputTokens   Int?
+  createdAt      DateTime       @default(now())
 
   @@index([conversationId])
 }
 
-// ─── Notifications ───────────────────────────────────────────────────────────
+// ─── Notifications ────────────────────────────────────────────────────────────
 
 model NotificationTemplate {
-  id        String   @id @default(cuid())
+  id        String              @id @default(cuid())
   tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  key       String   // e.g., "booking_confirmed"
+  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key       String
   channel   NotificationChannel
   subject   String?
   body      String
-  variables String[] // list of required template variables
-
-  isActive  Boolean  @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  variables String[]
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   @@unique([tenantId, key, channel])
   @@index([tenantId])
@@ -683,40 +644,33 @@ model NotificationTemplate {
 // ─── Webhooks ────────────────────────────────────────────────────────────────
 
 model Webhook {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  url         String
-  secret      String
-  events      EventType[]
-  isActive    Boolean  @default(true)
-
-  deliveries  WebhookDelivery[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String            @id @default(cuid())
+  tenantId  String
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  url       String
+  secret    String
+  events    EventType[]
+  isActive  Boolean           @default(true)
+  deliveries WebhookDelivery[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
   @@index([tenantId])
 }
 
 model WebhookDelivery {
-  id          String   @id @default(cuid())
-  webhookId   String
-  webhook     Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-
-  eventType   EventType
-  payload     Json
-
+  id             String    @id @default(cuid())
+  webhookId      String
+  webhook        Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  eventType      EventType
+  payload        Json
   responseStatus Int?
   responseBody   String?
-
-  attemptCount   Int      @default(0)
+  attemptCount   Int       @default(0)
   succeededAt    DateTime?
   failedAt       DateTime?
   nextRetryAt    DateTime?
-
-  createdAt   DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   @@index([webhookId])
 }
@@ -724,24 +678,19 @@ model WebhookDelivery {
 // ─── API Keys ────────────────────────────────────────────────────────────────
 
 model ApiKey {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  name        String
-  keyHash     String   @unique
-  prefix      String   // First 8 chars shown to user
-
-  scopes      String[]
-
-  lastUsedAt  DateTime?
-  expiresAt   DateTime?
-  isActive    Boolean  @default(true)
-
-  createdBy   String
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name       String
+  keyHash    String   @unique
+  prefix     String
+  scopes     String[]
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  isActive   Boolean  @default(true)
+  createdBy  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([tenantId])
   @@index([keyHash])
@@ -750,26 +699,25 @@ model ApiKey {
 // ─── Audit Log ───────────────────────────────────────────────────────────────
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  userId      String?
-  action      String   // e.g., "booking.create"
-  resource    String   // e.g., "Booking"
-  resourceId  String?
-
-  before      Json?
-  after       Json?
-
-  ipAddress   String?
-  userAgent   String?
-  requestId   String?
-
-  occurredAt  DateTime @default(now())
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId     String?
+  sessionId  String?
+  action     String
+  resource   String
+  resourceId String?
+  before     Json?
+  after      Json?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  requestId  String?
+  occurredAt DateTime @default(now())
 
   @@index([tenantId])
   @@index([tenantId, userId])
   @@index([tenantId, resource, resourceId])
+  @@index([tenantId, action])
   @@index([occurredAt])
 }

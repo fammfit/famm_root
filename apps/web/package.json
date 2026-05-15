@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest"
+    "test": "vitest --workspace vitest.workspace.ts"
   },
   "dependencies": {
     "@famm/db": "*",
