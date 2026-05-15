@@ -1,0 +1,80 @@
+---
+description: Self-review pass before you submit a UI change.
+globs:
+  - "apps/web/**/*.{ts,tsx}"
+  - "packages/ui/**/*.{ts,tsx}"
+alwaysApply: true
+---
+
+# Review Checklist
+
+Run this list against your diff before you open or update a PR. The
+GitHub PR template carries the user-facing version of it.
+
+## Reuse
+
+- [ ] Did I search `packages/ui/src/components/{primitives,patterns}`
+      before writing this?
+- [ ] If a near-match existed, did I extend its variants instead of
+      forking?
+- [ ] Is this component placed at the right tier (L1 / L2 / L3)?
+
+## Tokens & styling
+
+- [ ] No raw hex, `px`, `rgb()`/`hsl()`, or `style={}` outside L1
+      primitives.
+- [ ] No Tailwind default palette in new code (`gray-*`, `red-*`, etc.).
+- [ ] If I added a new value, I added it to `tokens.json` and ran
+      `npm run tokens:generate`.
+- [ ] `npm run tokens:check` passes.
+
+## Accessibility
+
+- [ ] Keyboard reaches every interactive element in visual order.
+- [ ] Visible focus ring on every interactive element.
+- [ ] Every interactive element has an accessible name.
+- [ ] Touch targets are 44×44 on touch viewports.
+- [ ] Form inputs use `FormField` (or equivalent L1) — never bare
+      `<input>` in feature code.
+- [ ] Errors carry a non-color signal (icon or label).
+- [ ] Animations branch on `useReducedMotion()` when > 200ms or
+      involving translation.
+- [ ] Live regions on data that changes (timers, set counters, async).
+
+## Responsive
+
+- [ ] Verified at `375 × 667`, `768 × 1024`, and `1280 × 800`.
+- [ ] No horizontal scroll except intentional carousels.
+- [ ] Bottom-pinned primary actions clear the iOS home indicator.
+- [ ] In-session UI stays legible in landscape on phones.
+
+## Content
+
+- [ ] Button labels are verb phrases that name the outcome.
+- [ ] Errors say what went wrong *and* what to do.
+- [ ] Sentence case for buttons, labels, headings.
+- [ ] Numbers use `tabular-nums`; weights, time, currency formatted per
+      `content-guidelines.md`.
+
+## States
+
+- [ ] Loading, empty, error, loaded states all exist for any fetch
+      surface.
+- [ ] Async triggers disable + show progress within 100ms.
+- [ ] Destructive actions confirm via dialog, not toast.
+
+## Code hygiene
+
+- [ ] No `console.log` (warn/error allowed).
+- [ ] No `@ts-ignore` without a comment explaining why.
+- [ ] No new dependencies — wrap or extend instead.
+- [ ] `npm run lint`, `typecheck`, `test` pass locally.
+
+## PR description
+
+- [ ] UI checklist filled in.
+- [ ] Light + dark screenshots (mobile + desktop) attached.
+- [ ] Figma frame linked.
+
+If you can't tick a box, explain why in the PR description rather than
+ticking it anyway.

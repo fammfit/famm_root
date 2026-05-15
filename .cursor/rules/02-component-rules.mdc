@@ -1,0 +1,88 @@
+---
+description: Rules for writing, extending, and composing components in @famm/ui and apps/web.
+globs:
+  - "apps/web/**/*.{ts,tsx}"
+  - "packages/ui/**/*.{ts,tsx}"
+alwaysApply: true
+---
+
+# Component Rules
+
+## Reuse first
+
+Before writing a new component:
+
+1. `grep -r "Button\|Card\|Input\|Badge\|Spinner\|FormField\|StatCard\|SessionTimer" packages/ui/src`
+   — does what you need already exist?
+2. If you find a near-match, **add a variant** to the existing primitive
+   via its `cva()` config. Don't fork.
+3. If you genuinely need a new component:
+   - Reused across features → L2 pattern in `packages/ui/src/components/patterns/`.
+   - Feature-specific → L3 in `apps/web/src/components/<feature>/`.
+   - New atomic primitive → **ask first**.
+
+## Componentry conventions
+
+- Use `React.forwardRef` for any component that wraps an HTML element.
+- Use `cva()` for variant-driven styling. Variants are declarative; never
+  branch on props with `if (variant === ...)` inside the JSX.
+- Use the shared `cn()` from `@famm/ui` for className merging.
+- Export prop types as named types (`ButtonProps`), not inline.
+- Default exports are reserved for Next.js pages and config files.
+
+## Styling
+
+- **Tailwind utilities backed by semantic tokens only.** Allowed families:
+  - Color: `surface*`, `text-*`, `accent*`, `signal-*`, `border*`.
+  - Space: `p-inset-*`, `gap-stack-*`, `gap-inline-*`, `m-stack-*`.
+  - Radius: `rounded-control`, `rounded-card`, `rounded-pill`.
+  - Shadow: `shadow-sm`, `shadow`, `shadow-lg`, `shadow-focus`.
+  - Motion: `duration-fast|base|slow`, `ease-standard|emphasized`.
+  - Type: `font-sans`, `font-mono`.
+- **No raw values.** No hex, no `px` literals, no `rgb()`/`hsl()`, no
+  inline `style={}` outside L1 primitives. ESLint will fail your PR.
+- **No raw Tailwind palette colors** (`bg-gray-100`, `text-red-600`) in
+  new code. Use semantic tokens. The lint rule doesn't catch this yet —
+  reviewers do.
+
+## State, loading, error, empty
+
+A list or fetch component is incomplete without all four:
+
+| State | Required behavior |
+|-------|-------------------|
+| Loading | Skeleton matching the final shape (not a centered spinner unless tiny). |
+| Empty | One sentence + one action. Use the `EmptyState` pattern when it lands. |
+| Error | Plain language + retry. Surface details to a `<details>` element if actionable. |
+| Loaded | The content. |
+
+## Naming
+
+- Files: `kebab-case.tsx` (`stat-card.tsx`).
+- Components: `PascalCase` (`StatCard`).
+- Variant values: `kebab-case` lowercase (`"primary"`, `"sm"`, `"pr"`).
+- Tokens: `dot.case` in JSON, `kebab-case` in CSS variables, `camelCase`
+  in TS exports.
+
+## Anti-patterns (review will reject)
+
+- A new component that duplicates an existing one with a different name
+  (`PrimaryButton.tsx` next to `Button` with `variant="default"`).
+- Variants encoded as boolean props (`<Card raised highlighted compact>`)
+  instead of `variant="..."`.
+- `className` prop used to override foundational styling (color, padding
+  scale, radius) — these come from variants.
+- Components importing from `apps/web` (would invert the dependency).
+- Inline icon SVGs when `lucide-react` has the icon already.
+- New icon libraries.
+
+## Accessibility (every component, every time)
+
+- Interactive elements get a visible focus ring.
+- Touch targets ≥ 44×44 on touch viewports.
+- Form inputs get a `<label>` — use `FormField`.
+- Icons that convey meaning get `aria-label`; decorative get
+  `aria-hidden`.
+- Animations branch on `useReducedMotion()` from `@famm/ui`.
+
+See `03-accessibility.mdc` for the binding details.

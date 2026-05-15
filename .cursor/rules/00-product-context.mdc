@@ -1,0 +1,56 @@
+---
+description: What FAMM is, who uses it, and the mental models behind the product.
+alwaysApply: true
+---
+
+# FAMM — Product Context
+
+FAMM is a fitness web app. The product surface is `apps/web` (Next.js 14).
+The backend is `apps/api`. Shared code is in `packages/*`.
+
+## Who uses it
+
+- **Members** — people training. They use FAMM mid-workout (literally
+  while moving), so the in-session UI must be glance-readable, thumb-
+  reachable, and forgiving of mistaps.
+- **Trainers** — coaches managing clients and bookings. They use FAMM
+  before and after sessions, often on a tablet.
+- **Admins** — operators managing studios, payments, scheduling.
+
+## Mental models
+
+- A **workout** is the unit of training. It has **exercises**, which have
+  **sets** with **reps** and **load**.
+- A **session** is a trainer-led appointment. Not the same as a workout.
+- A **booking** is a scheduled session.
+- A **PR** (personal record) is a domain-significant event. The system
+  treats it specially — see the `signal.pr` token and the `pr-celebrate`
+  motion.
+
+Settle on the domain words above; do not invent synonyms (see
+`design-system/content-guidelines.md`).
+
+## Constraints that shape decisions
+
+- **Mid-workout attention is ~2 seconds.** Numbers, the next action, and
+  current state are the loudest things on screen.
+- **Locale and unit support is first-class.** kg/lb, currency symbols, and
+  date formats vary per user. Internal storage is SI.
+- **Multi-tenant.** Studios have their own branding via tokens; this is
+  why theming is a first-class concern (see `04-design-tokens.mdc`).
+
+## Repo shape
+
+- `apps/web` — Next.js 14, the product surface.
+- `apps/api` — backend.
+- `packages/ui` — `@famm/ui` design system: tokens + primitives + patterns.
+- `packages/{auth,db,shared,types,events,payments,ai,config}`.
+- `design-system/` — DS documentation (this folder's parent doc set).
+- `docs/` — architecture, product, system strategy.
+
+## Read before designing a feature
+
+- `design-system/principles.md` — the five principles, in priority order.
+- `design-system/ux-rules.md` — non-negotiable interaction rules.
+- The relevant `docs/*.md` for the domain (e.g. `BOOKING_RULES.md`,
+  `SLOT_GENERATION.md`).

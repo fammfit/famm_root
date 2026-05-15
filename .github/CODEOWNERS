@@ -8,11 +8,13 @@
 /packages/config/eslint/design-system.js @fammfit/design-system
 /docs/DESIGN_SYSTEM.md                   @fammfit/design-system
 /docs/DESIGN_SYSTEM_*.md                 @fammfit/design-system
+/design-system/                          @fammfit/design-system
 /scripts/generate-tokens.mjs             @fammfit/design-system
 
 # AI agent rules — keep in sync with the strategy doc.
 /CLAUDE.md                               @fammfit/design-system
 /.cursor/rules/                          @fammfit/design-system
+/.claude/commands/                       @fammfit/design-system
 
 # Workflows that gate UI changes.
 /.github/workflows/tokens-sync.yml       @fammfit/design-system

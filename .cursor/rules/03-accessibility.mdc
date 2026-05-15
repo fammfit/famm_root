@@ -1,0 +1,75 @@
+---
+description: Accessibility rules — WCAG 2.2 AA baseline. These are binding.
+globs:
+  - "apps/web/**/*.{ts,tsx}"
+  - "packages/ui/**/*.{ts,tsx}"
+alwaysApply: true
+---
+
+# Accessibility
+
+Baseline: **WCAG 2.2 Level AA**. CI enforces what it can; the rest is on
+you. Source of truth: `design-system/accessibility.md`.
+
+## Hard rules
+
+1. **Visible focus ring** on every interactive element. Never
+   `outline: none` without a replacement of equal or better contrast.
+2. **Accessible name** on every interactive element. Visible label, or
+   `aria-label`, or `aria-labelledby`. Icon-only buttons must have one.
+3. **44×44 minimum touch target** on touch viewports. The `Button`
+   `size="icon"` variant ships at `h-11 w-11`.
+4. **Every input has a `<label>`.** Use the `FormField` pattern. Bare
+   `<input>` is banned outside L1 primitives.
+5. **Reduced motion respected.** Branch on `useReducedMotion()` from
+   `@famm/ui`. Tokens already collapse `--duration-*` to 0ms in the
+   reduced-motion media query.
+6. **Color is never the only signal.** Errors are red *and* labelled. PR
+   state is gold *and* labelled. Required fields have an asterisk *and*
+   `aria-required`.
+
+## Keyboard
+
+- Every interactive element is reachable by Tab in visual order.
+- Escape closes modals and popovers; focus returns to the trigger.
+- Arrow keys navigate within composite widgets (tabs, listbox, calendar).
+- Enter and Space both activate buttons identically. `<div onClick>`
+  doesn't.
+
+## Screen readers
+
+- Live data (timers, set counters, async results) uses
+  `aria-live="polite"`. Alerts use `role="alert"`.
+- Modals: `aria-modal="true"` and `aria-labelledby` pointing at the
+  title.
+- Form errors: `aria-invalid="true"` on the control, error message
+  associated via `aria-describedby`.
+- Decorative icons: `aria-hidden="true"`.
+
+## Contrast
+
+- Body text ≥ 4.5:1; large text ≥ 3:1; meaningful UI graphics ≥ 3:1.
+- Tokens are pre-validated. If you introduce a raw color (which you
+  shouldn't — see `02-component-rules.mdc`), it's your contrast burden.
+
+## When uncertain
+
+If you're not sure how to make something accessible, **don't ship the
+inaccessible version**. Ask. The right answer is often "use the existing
+primitive that already handles this".
+
+## What CI enforces
+
+- `eslint-plugin-jsx-a11y/recommended` plus stricter overrides
+  (`no-autofocus`, `click-events-have-key-events`,
+  `no-static-element-interactions`).
+- `no-restricted-syntax` bans raw hex/px/rgb and inline `style={}`
+  outside L1 primitives.
+
+## What CI doesn't catch (review enforces)
+
+- Logical tab order.
+- That an `aria-label` actually describes the action.
+- That a live region announces what the user needs.
+- That a focus ring is visible against its actual background.
+- That a "destructive" button looks destructive in dark mode too.

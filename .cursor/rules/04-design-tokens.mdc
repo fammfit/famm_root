@@ -1,0 +1,85 @@
+---
+description: Design tokens — what exists, how to use them, how to add new ones.
+globs:
+  - "apps/web/**/*.{ts,tsx,css}"
+  - "packages/ui/**/*.{ts,tsx,css,json}"
+alwaysApply: true
+---
+
+# Design Tokens
+
+## Where tokens live
+
+- **Source of truth:** `packages/ui/src/tokens/tokens.json`.
+- **Generated CSS variables:** `packages/ui/src/tokens/tokens.css`. Do
+  not edit. Imported by `apps/web/src/app/layout.tsx`.
+- **Generated TS const:** `packages/ui/src/tokens/tokens.ts`. Do not
+  edit.
+- **Tailwind theme:** `packages/ui/tailwind.config.ts` exposes tokens as
+  utility classes.
+- **Generator:** `scripts/generate-tokens.mjs`. Run via
+  `npm run tokens:generate`. CI uses `npm run tokens:check`.
+
+## What to use, by need
+
+| Need | Token family | Tailwind |
+|------|--------------|----------|
+| Page background | `surface.*` | `bg-surface` / `bg-surface-sunken` / `bg-surface-raised` |
+| Body / heading text | `text.primary` | `text-text-primary` |
+| Muted captions, hints | `text.muted` | `text-text-muted` |
+| Primary action / link | `accent.*` | `bg-accent` / `text-accent` |
+| Success / danger / warning | `signal.*` | `bg-signal-success` etc. |
+| **Personal record only** | `signal.pr` | `text-signal-pr` etc. |
+| Card hairlines | `border.subtle` | `border-border-subtle` |
+| Form controls | `border.default` | `border-border` |
+| Padding | `space.inset.*` | `p-inset-sm`, `px-inset-md` |
+| Vertical gaps | `space.stack.*` | `gap-stack-md` |
+| Horizontal gaps | `space.inline.*` | `gap-inline-sm` |
+| Button/input corner | `radius.control` | `rounded-control` |
+| Card corner | `radius.card` | `rounded-card` |
+| Pill / avatar | `radius.pill` | `rounded-pill` |
+| Focus ring | `--color-focus-ring` | `ring` (DEFAULT) |
+| Motion duration | `duration.*` | `duration-fast` / `base` / `slow` |
+| Motion easing | `easing.*` | `ease-standard` / `ease-emphasized` |
+
+## Never
+
+- **Never hand-edit** `tokens.css` or `tokens.ts`. Regenerate.
+- **Never write raw hex, `px` literal, `rgb()`/`hsl()`** outside L1
+  primitives. ESLint will fail your PR.
+- **Never write inline `style={}`** outside L1 primitives.
+- **Never use Tailwind's default palette** (`bg-gray-100`, `text-red-600`)
+  in new code. Always use semantic tokens.
+
+## Adding a token
+
+1. Add to `packages/ui/src/tokens/tokens.json` under the correct layer:
+   - `primitive.*` for raw values (rare).
+   - `semantic.{light,dark}.*` for new color intents.
+   - `semantic.space.*` / `semantic.radius.*` for new sizes.
+2. Run `npm run tokens:generate`.
+3. Surface in `packages/ui/tailwind.config.ts` if it should be a utility.
+4. Document in `design-system/tokens/README.md`.
+5. Note in `design-system/changelog.md`.
+
+## Theming
+
+- **Light is default.** Dark is a first-class peer — every semantic token
+  has both values.
+- **Themes switch via `data-theme="dark"`** on `<html>`. Tailwind's
+  `darkMode: ["class", '[data-theme="dark"]']` is already configured.
+- **Multi-tenant studios** can override semantic tokens via a scoped
+  `data-theme="studio-<id>"` block — primitives don't care.
+
+## Quick sanity check
+
+Before opening a PR with new UI, search your diff for these patterns —
+if any match outside L1 primitives, fix before submitting:
+
+```
+#[0-9a-fA-F]{3,8}    # hex colors
+[0-9]+px              # raw pixel literals
+rgb\(|rgba\(|hsl\(|hsla\(   # raw color functions
+style={{              # inline styles
+bg-gray-|text-gray-|bg-red-|text-red-  # default Tailwind palette
+```

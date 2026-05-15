@@ -1,0 +1,57 @@
+---
+description: The UX/UI system overview — tier model, where each layer lives, how to navigate it.
+globs:
+  - "apps/web/**/*.{ts,tsx,css}"
+  - "packages/ui/**/*.{ts,tsx,css}"
+  - "design-system/**/*.md"
+alwaysApply: true
+---
+
+# UX/UI System
+
+The system has four tiers. Reuse before you create — every component you
+*could* write may already exist one tier up.
+
+| Tier | Lives in | Stability | Examples |
+|------|----------|-----------|----------|
+| **Tokens** | `packages/ui/src/tokens/` (source: `tokens.json`) | Versioned with the package | colors, space, radii, motion |
+| **L1 Primitives** | `packages/ui/src/components/primitives/` | Stable, semver | `Button`, `Input`, `Card`, `Badge`, `Spinner` |
+| **L2 Patterns** | `packages/ui/src/components/patterns/` | Stable within a release train | `FormField`, `StatCard`, `SessionTimer` |
+| **L3 Features** | `apps/web/src/components/<feature>/` | Free to change | feature-specific compositions |
+
+## Before you write JSX
+
+1. Search `packages/ui/src/components/primitives` and `…/patterns`. If
+   what you need exists, use it — don't fork.
+2. If close-but-not-quite, **extend the existing `cva()` variants**, not
+   the consumer.
+3. If it's genuinely new:
+   - Reused across features? → propose as L2 pattern.
+   - One-off for a feature? → L3 in `apps/web/src/components/<feature>/`.
+   - Net-new primitive? → **stop and ask**. DS owner approves L1.
+
+## What lives where
+
+- **Documentation, contracts, rules:** `design-system/*.md` and
+  subfolders.
+- **Token source of truth:** `packages/ui/src/tokens/tokens.json`.
+- **Generated outputs:** `tokens.css` (CSS variables) and `tokens.ts`
+  (typed const). **Do not edit.** Run `npm run tokens:generate`.
+- **Tailwind theme:** `packages/ui/tailwind.config.ts`. `apps/web`
+  inherits via `presets: [uiPreset]`.
+- **Lint enforcement:** `packages/config/eslint/design-system.js`.
+
+## When in doubt
+
+Stop and ask. Do not guess between two valid patterns. Do not invent a
+new token name, color value, or component name.
+
+## Pointers
+
+- Strategy: `docs/DESIGN_SYSTEM.md`
+- Principles: `design-system/principles.md`
+- UX rules: `design-system/ux-rules.md`
+- Accessibility: `design-system/accessibility.md`
+- Responsive: `design-system/responsive.md`
+- Motion: `design-system/motion.md`
+- Content: `design-system/content-guidelines.md`
