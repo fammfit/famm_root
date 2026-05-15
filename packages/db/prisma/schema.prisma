@@ -148,6 +148,18 @@ model Tenant {
   notifications  NotificationTemplate[]
   inviteTokens   InviteToken[]
 
+  // Payments
+  products       Product[]
+  customers      Customer[]
+  subscriptions  Subscription[]
+  payments       Payment[]
+  refunds        Refund[]
+  commissions    Commission[]
+  payouts        Payout[]
+  splitRules     RevenueSplitRule[]
+  ledgerAccounts LedgerAccount[]
+  ledgerEntries  LedgerEntry[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -370,6 +382,9 @@ model TrainerProfile {
   blockedPeriods         BlockedPeriod[]
   services               TrainerService[]
   bookings               Booking[]       @relation("TrainerBookings")
+  commissions            Commission[]
+  payouts                Payout[]
+  splitRules             RevenueSplitRule[]
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @updatedAt
 
@@ -720,4 +735,445 @@ model AuditLog {
   @@index([tenantId, resource, resourceId])
   @@index([tenantId, action])
   @@index([occurredAt])
+}
+
+// ─── Payments: Enums ──────────────────────────────────────────────────────────
+
+enum PriceType {
+  ONE_TIME
+  RECURRING
+}
+
+enum BillingInterval {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+}
+
+enum PaymentRecordStatus {
+  PENDING
+  REQUIRES_ACTION
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum CommissionStatus {
+  ACCRUED
+  PAID
+  REVERSED
+}
+
+enum CommissionRole {
+  TRAINER
+  LEAD_TRAINER
+  PLATFORM
+  TENANT
+}
+
+enum PayoutStatus {
+  PENDING
+  IN_TRANSIT
+  PAID
+  FAILED
+  CANCELED
+}
+
+enum PayoutDestinationType {
+  TRAINER
+  TENANT
+}
+
+enum LedgerEntryType {
+  DEBIT
+  CREDIT
+}
+
+enum LedgerAccountType {
+  PLATFORM_REVENUE
+  PLATFORM_FEE
+  STRIPE_FEE
+  TRAINER_PAYABLE
+  TENANT_PAYABLE
+  LEAD_TRAINER_PAYABLE
+  REFUNDS_PAYABLE
+  CUSTOMER_RECEIVABLE
+  CASH
+}
+
+enum RetryStatus {
+  SCHEDULED
+  IN_PROGRESS
+  SUCCEEDED
+  FAILED
+  ABANDONED
+}
+
+// ─── Payments: Stripe Idempotency ─────────────────────────────────────────────
+
+model StripeWebhookEvent {
+  id            String    @id
+  type          String
+  livemode      Boolean   @default(false)
+  apiVersion    String?
+  payload       Json
+  processedAt   DateTime?
+  failedAt      DateTime?
+  errorMessage  String?
+  attempts      Int       @default(0)
+  receivedAt    DateTime  @default(now())
+
+  @@index([type])
+  @@index([processedAt])
+  @@index([receivedAt])
+}
+
+// ─── Payments: Catalog ────────────────────────────────────────────────────────
+
+model Product {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  stripeProductId String?  @unique
+  serviceId       String?
+  isActive        Boolean  @default(true)
+  metadata        Json?
+  prices          Price[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model Price {
+  id              String          @id @default(cuid())
+  productId       String
+  product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stripePriceId   String?         @unique
+  nickname        String?
+  type            PriceType       @default(ONE_TIME)
+  currency        String          @default("USD")
+  unitAmount      Int?
+  interval        BillingInterval?
+  intervalCount   Int?            @default(1)
+  trialPeriodDays Int?
+  tiers           Json?
+  tiersMode       String?
+  isActive        Boolean         @default(true)
+  metadata        Json?
+  payments        Payment[]
+  items           SubscriptionItem[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([productId])
+  @@index([productId, isActive])
+}
+
+// ─── Payments: Customers & Subscriptions ──────────────────────────────────────
+
+model Customer {
+  id                     String         @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId                 String?
+  email                  String
+  name                   String?
+  stripeCustomerId       String         @unique
+  defaultPaymentMethodId String?
+  metadata               Json?
+  payments               Payment[]
+  subscriptions          Subscription[]
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([stripeCustomerId])
+  @@index([tenantId, email])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  tenantId             String
+  tenant               Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId           String
+  customer             Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String             @unique
+  status               SubscriptionStatus
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAt             DateTime?
+  canceledAt           DateTime?
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  collectionMethod     String             @default("charge_automatically")
+  metadata             Json?
+  items                SubscriptionItem[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([customerId])
+}
+
+model SubscriptionItem {
+  id                       String       @id @default(cuid())
+  subscriptionId           String
+  subscription             Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  priceId                  String
+  price                    Price        @relation(fields: [priceId], references: [id])
+  stripeSubscriptionItemId String       @unique
+  quantity                 Int          @default(1)
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  @@index([subscriptionId])
+}
+
+// ─── Payments: Payment & Refund ───────────────────────────────────────────────
+
+model Payment {
+  id                      String                @id @default(cuid())
+  tenantId                String
+  tenant                  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId              String?
+  customer                Customer?             @relation(fields: [customerId], references: [id])
+  bookingId               String?               @unique
+  priceId                 String?
+  price                   Price?                @relation(fields: [priceId], references: [id])
+  stripePaymentIntentId   String?               @unique
+  stripeChargeId          String?               @unique
+  stripeCheckoutSessionId String?               @unique
+  stripeInvoiceId         String?               @unique
+  amount                  Int
+  amountRefunded          Int                   @default(0)
+  applicationFeeAmount    Int                   @default(0)
+  stripeFeeAmount         Int                   @default(0)
+  netAmount               Int                   @default(0)
+  currency                String                @default("USD")
+  status                  PaymentRecordStatus   @default(PENDING)
+  destinationAccountId    String?
+  trainerProfileId        String?
+  description             String?
+  failureCode             String?
+  failureMessage          String?
+  metadata                Json?
+  ledgerEntries           LedgerEntry[]
+  commissions             Commission[]
+  refunds                 Refund[]
+  retryAttempts           PaymentRetryAttempt[]
+  succeededAt             DateTime?
+  refundedAt              DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([customerId])
+  @@index([trainerProfileId])
+}
+
+model Refund {
+  id             String        @id @default(cuid())
+  tenantId       String
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  paymentId      String
+  payment        Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  stripeRefundId String        @unique
+  amount         Int
+  currency       String        @default("USD")
+  reason         String?
+  status         RefundStatus  @default(PENDING)
+  failureReason  String?
+  reversedCommissions Boolean  @default(false)
+  metadata       Json?
+  ledgerEntries  LedgerEntry[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([tenantId])
+  @@index([paymentId])
+  @@index([status])
+}
+
+// ─── Payments: Commissions & Splits ───────────────────────────────────────────
+
+model RevenueSplitRule {
+  id               String          @id @default(cuid())
+  tenantId         String
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  trainerProfileId String?
+  trainer          TrainerProfile? @relation(fields: [trainerProfileId], references: [id])
+  serviceId        String?
+  // Basis points (1/100 of a percent). Sum of all bps must be <= 10000.
+  platformBps      Int             @default(0)
+  tenantBps        Int             @default(0)
+  trainerBps       Int             @default(0)
+  leadTrainerBps   Int             @default(0)
+  priority         Int             @default(0)
+  isActive         Boolean         @default(true)
+  validFrom        DateTime?
+  validUntil       DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([tenantId, isActive])
+  @@index([trainerProfileId])
+  @@index([serviceId])
+}
+
+model Commission {
+  id               String           @id @default(cuid())
+  tenantId         String
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  paymentId        String
+  payment          Payment          @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  trainerProfileId String?
+  trainer          TrainerProfile?  @relation(fields: [trainerProfileId], references: [id])
+  beneficiaryType  String           // "trainer" | "lead_trainer" | "tenant" | "platform"
+  beneficiaryId    String?
+  role             CommissionRole
+  rateBps          Int
+  amount           Int
+  currency         String           @default("USD")
+  status           CommissionStatus @default(ACCRUED)
+  payoutId         String?
+  payout           Payout?          @relation(fields: [payoutId], references: [id])
+  reversedById     String?
+  reversedBy       Commission?      @relation("CommissionReversal", fields: [reversedById], references: [id])
+  reversals        Commission[]     @relation("CommissionReversal")
+  metadata         Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([trainerProfileId])
+  @@index([paymentId])
+  @@index([payoutId])
+}
+
+// ─── Payments: Payouts ────────────────────────────────────────────────────────
+
+model Payout {
+  id                   String                 @id @default(cuid())
+  tenantId             String
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  destinationType      PayoutDestinationType
+  trainerProfileId     String?
+  trainer              TrainerProfile?        @relation(fields: [trainerProfileId], references: [id])
+  destinationAccountId String?
+  stripePayoutId       String?                @unique
+  stripeTransferId     String?                @unique
+  amount               Int
+  currency             String                 @default("USD")
+  status               PayoutStatus           @default(PENDING)
+  arrivalDate          DateTime?
+  failureCode          String?
+  failureMessage       String?
+  description          String?
+  metadata             Json?
+  commissions          Commission[]
+  ledgerEntries        LedgerEntry[]
+  paidAt               DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([trainerProfileId])
+}
+
+// ─── Payments: Ledger ─────────────────────────────────────────────────────────
+
+model LedgerAccount {
+  id        String            @id @default(cuid())
+  tenantId  String
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  type      LedgerAccountType
+  ownerType String?
+  ownerId   String?
+  currency  String            @default("USD")
+  balance   BigInt            @default(0)
+  entries   LedgerEntry[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@unique([tenantId, type, ownerId, currency])
+  @@index([tenantId])
+  @@index([tenantId, type])
+}
+
+model LedgerEntry {
+  id            String          @id @default(cuid())
+  tenantId      String
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accountId     String
+  account       LedgerAccount   @relation(fields: [accountId], references: [id])
+  entryType     LedgerEntryType
+  amount        BigInt
+  currency      String          @default("USD")
+  transactionId String
+  paymentId     String?
+  payment       Payment?        @relation(fields: [paymentId], references: [id])
+  refundId      String?
+  refund        Refund?         @relation(fields: [refundId], references: [id])
+  payoutId      String?
+  payout        Payout?         @relation(fields: [payoutId], references: [id])
+  description   String?
+  metadata      Json?
+  occurredAt    DateTime        @default(now())
+
+  @@index([tenantId])
+  @@index([accountId])
+  @@index([transactionId])
+  @@index([paymentId])
+  @@index([occurredAt])
+}
+
+// ─── Payments: Failed Payment Recovery ───────────────────────────────────────
+
+model PaymentRetryAttempt {
+  id             String       @id @default(cuid())
+  paymentId      String
+  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  attemptNumber  Int
+  status         RetryStatus  @default(SCHEDULED)
+  failureCode    String?
+  failureMessage String?
+  scheduledAt    DateTime
+  attemptedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([paymentId])
+  @@index([status, scheduledAt])
 }
