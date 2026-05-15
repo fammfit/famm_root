@@ -3,9 +3,9 @@ import type { Config } from "tailwindcss";
 /**
  * Tailwind theme is the consumption surface for design tokens.
  *
- * Semantic keys (surface, text, accent, signal) are the preferred API.
- * The legacy `brand.*` scale is kept temporarily so already-shipped
- * primitives compile; new components must use semantic names.
+ * Color keys are semantic (surface, text, accent, signal). New raw values
+ * are added to tokens.json first, surfaced as CSS variables in tokens.css,
+ * then mapped here.
  *
  * See docs/DESIGN_SYSTEM.md §4.
  */
@@ -43,17 +43,6 @@ const config: Config = {
           danger: "var(--color-signal-danger)",
           warning: "var(--color-signal-warning)",
           pr: "var(--color-signal-pr)",
-        },
-        // Legacy scale — do not use in new code. Slated for removal once
-        // existing primitives are migrated to semantic tokens.
-        brand: {
-          50: "var(--color-brand-50, #eff6ff)",
-          100: "var(--color-brand-100, #dbeafe)",
-          200: "var(--color-brand-200, #bfdbfe)",
-          500: "var(--color-brand-500, #3b82f6)",
-          600: "var(--color-brand-600, #2563eb)",
-          700: "var(--color-brand-700, #1d4ed8)",
-          900: "var(--color-brand-900, #1e3a8a)",
         },
       },
       spacing: {

@@ -3,29 +3,33 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center rounded-control text-sm font-medium transition-colors duration-fast ease-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-500",
-        destructive: "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500",
-        outline: "border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 focus-visible:ring-brand-500",
-        ghost: "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
-        link: "text-brand-600 underline-offset-4 hover:underline",
-        secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200 focus-visible:ring-gray-500",
+        default:
+          "bg-accent text-onAccent hover:bg-accent-hover focus-visible:ring",
+        destructive:
+          "bg-signal-danger text-onAccent hover:opacity-90 focus-visible:ring-signal-danger",
+        outline:
+          "border border-border bg-surface text-text-primary hover:bg-surface-sunken focus-visible:ring",
+        ghost:
+          "text-text-secondary hover:bg-surface-sunken hover:text-text-primary",
+        link:
+          "text-accent underline-offset-4 hover:underline focus-visible:ring",
+        secondary:
+          "bg-surface-sunken text-text-primary hover:bg-accent-subtle focus-visible:ring",
       },
       size: {
-        sm: "h-8 px-3 text-xs",
-        md: "h-10 px-4",
-        lg: "h-12 px-6 text-base",
-        icon: "h-10 w-10",
+        sm: "h-8 px-inset-sm text-xs",
+        md: "h-10 px-inset-md",
+        lg: "h-12 px-inset-lg text-base",
+        // 44×44 floor for touch (WCAG 2.2 — see DESIGN_SYSTEM.md §5).
+        icon: "h-11 w-11",
       },
     },
-    defaultVariants: {
-      variant: "default",
-      size: "md",
-    },
-  }
+    defaultVariants: { variant: "default", size: "md" },
+  },
 );
 
 export interface ButtonProps
@@ -46,7 +50,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {loading && (
           <svg
-            className="mr-2 h-4 w-4 animate-spin"
+            className="mr-inline-sm h-4 w-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -59,7 +63,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {children}
       </button>
     );
-  }
+  },
 );
 
 Button.displayName = "Button";

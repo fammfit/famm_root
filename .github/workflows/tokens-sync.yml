@@ -1,0 +1,42 @@
+name: Tokens Sync
+
+# Guarantees that packages/ui/src/tokens/tokens.{css,ts} match
+# packages/ui/src/tokens/tokens.json. Run on every PR that touches tokens;
+# fail if outputs are stale.
+#
+# Once the Figma → Tokens Studio export pipeline is wired up (see
+# docs/DESIGN_SYSTEM.md §4.2), a separate scheduled job in this workflow will
+# pull tokens.json from Figma and open a PR.
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "packages/ui/src/tokens/**"
+      - "scripts/generate-tokens.mjs"
+      - ".github/workflows/tokens-sync.yml"
+  pull_request:
+    paths:
+      - "packages/ui/src/tokens/**"
+      - "scripts/generate-tokens.mjs"
+      - ".github/workflows/tokens-sync.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check tokens outputs are up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Regenerate token outputs
+        run: node scripts/generate-tokens.mjs --check

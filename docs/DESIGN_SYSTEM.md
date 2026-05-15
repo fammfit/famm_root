@@ -251,8 +251,9 @@ plausible-looking UI that quietly forks the system.
 - `typecheck`
 - `test` (Vitest, including axe-core component tests)
 - `build` (`turbo build`)
-- Visual regression on `packages/ui` stories (Chromatic or Playwright +
-  pixelmatch) — required for `area:design-system` PRs.
+- Visual regression on `packages/ui` stories (Playwright + pixelmatch — no
+  SaaS dependency, runs locally; see `.github/workflows/visual-regression.yml`)
+  — required for `area:design-system` PRs once the stories surface lands.
 - For `area:design-system`: one approval from a designated DS owner
   (CODEOWNERS).
 
@@ -387,6 +388,5 @@ A UI PR is mergeable when **all** of the following are true:
 
 - Do we adopt Radix primitives under the hood for L1, or roll our own?
   (Leaning Radix for `Dialog`, `Popover`, `Tooltip`, `Tabs`.)
-- Chromatic vs Playwright + pixelmatch for VRT? Cost vs control.
 - When do we introduce a native mobile shell, and does the token pipeline
   need a third output (RN StyleSheet / Tamagui)?
