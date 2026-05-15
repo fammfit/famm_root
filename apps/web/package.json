@@ -1,9 +1,42 @@
-
 {
+  "name": "@famm/web",
+  "version": "0.0.1",
+  "private": true,
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest",
-    "build": "next build"
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@famm/db": "*",
+    "@famm/shared": "*",
+    "next": "14.2.3",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "zod": "^3.23.0",
+    "jose": "^5.3.0",
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.1.3",
+    "ioredis": "^5.3.2",
+    "openai": "^4.52.0",
+    "stripe": "^16.1.0",
+    "nanoid": "^5.0.7",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
   }
 }
