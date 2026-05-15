@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getRequestContext } from "@/lib/request-context";
 import { apiSuccess, apiError, handleError } from "@/lib/api-response";
 import { UpdateBookingSchema, ROLE_HIERARCHY } from "@famm/shared";
+import { publishEvent } from "@/lib/booking/realtime";
+import { nextWaiter } from "@/lib/booking/waitlist";
 
 export async function GET(
   _request: NextRequest,
@@ -93,6 +95,42 @@ export async function PATCH(
           : {}),
       },
     });
+
+    if (input.status === "CANCELLED") {
+      await Promise.all([
+        publishEvent(ctx.tenantId, {
+          type: "BOOKING_CANCELLED",
+          bookingId: updated.id,
+          serviceId: booking.serviceId,
+          startAt: booking.startAt.toISOString(),
+          endAt: booking.endAt.toISOString(),
+        }),
+        publishEvent(ctx.tenantId, {
+          type: "SLOT_UPDATED",
+          serviceId: booking.serviceId,
+          trainerId: booking.trainerId ?? undefined,
+          startAt: booking.startAt.toISOString(),
+          endAt: booking.endAt.toISOString(),
+          available: true,
+        }),
+      ]);
+
+      const waiter = await nextWaiter(
+        ctx.tenantId,
+        booking.serviceId,
+        booking.startAt.toISOString(),
+        booking.trainerId ?? undefined
+      );
+      if (waiter) {
+        await publishEvent(ctx.tenantId, {
+          type: "WAITLIST_NOTIFIED",
+          waitlistId: waiter.id,
+          serviceId: booking.serviceId,
+          startAt: booking.startAt.toISOString(),
+          endAt: booking.endAt.toISOString(),
+        });
+      }
+    }
 
     return apiSuccess(updated);
   } catch (err) {
