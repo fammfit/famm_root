@@ -1,0 +1,11 @@
+/** @type {import("eslint").Linter.Config} */
+module.exports = {
+  extends: ["./base.js"],
+  env: {
+    node: true,
+  },
+  rules: {
+    "no-process-exit": "error",
+    "import/no-default-export": "off",
+  },
+};
