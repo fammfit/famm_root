@@ -1,5 +1,5 @@
 {
-  "extends": "@famm/config/typescript/node",
+  "extends": "../config/typescript/node.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"

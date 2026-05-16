@@ -12,25 +12,25 @@ describe("can()", () => {
 
   it("grants TRAINER_LEAD all TRAINER permissions", () => {
     expect(can("TRAINER_LEAD", "booking:read:all")).toBe(true);
-    expect(can("TRAINER_LEAD", "trainer:manage")).toBe(true);
+    expect(can("TRAINER_LEAD", "trainer:hierarchy:manage")).toBe(true);
   });
 
   it("grants TENANT_ADMIN most admin permissions", () => {
     expect(can("TENANT_ADMIN", "user:update:role")).toBe(true);
-    expect(can("TENANT_ADMIN", "tenant:settings")).toBe(true);
+    expect(can("TENANT_ADMIN", "tenant:settings:update")).toBe(false); // owner-only
   });
 
-  it("denies TENANT_ADMIN tenant:delete (owner-only)", () => {
-    expect(can("TENANT_ADMIN", "tenant:delete")).toBe(false);
+  it("denies TENANT_ADMIN tenant:billing (owner-only)", () => {
+    expect(can("TENANT_ADMIN", "tenant:billing")).toBe(false);
   });
 
-  it("grants TENANT_OWNER all permissions", () => {
-    expect(can("TENANT_OWNER", "tenant:delete")).toBe(true);
+  it("grants TENANT_OWNER billing and settings", () => {
+    expect(can("TENANT_OWNER", "tenant:settings:update")).toBe(true);
     expect(can("TENANT_OWNER", "tenant:billing")).toBe(true);
   });
 
   it("grants SUPER_ADMIN everything", () => {
-    expect(can("SUPER_ADMIN", "tenant:delete")).toBe(true);
+    expect(can("SUPER_ADMIN", "tenant:suspend")).toBe(true);
     expect(can("SUPER_ADMIN", "audit:read")).toBe(true);
   });
 
@@ -51,7 +51,7 @@ describe("canAny()", () => {
 
 describe("canAll()", () => {
   it("returns true only if all permissions match", () => {
-    expect(canAll("TRAINER", ["booking:read:own", "booking:read:all"])).toBe(true);
+    expect(canAll("TRAINER", ["booking:read:own", "availability:read"])).toBe(true);
     expect(canAll("CLIENT", ["booking:read:own", "booking:read:all"])).toBe(false);
   });
 });

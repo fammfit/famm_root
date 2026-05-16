@@ -113,8 +113,24 @@ enum EventType {
   INVITE_REVOKED
   SERVICE_CREATED
   AVAILABILITY_UPDATED
+  SLOT_GENERATED
+  SLOT_CANCELLED
+  SLOT_UPDATED
+  BOOKING_HOLD_ACQUIRED
+  BOOKING_HOLD_EXPIRED
+  WAITLIST_JOINED
+  WAITLIST_LEFT
+  WAITLIST_PROMOTED
   AI_CONVERSATION_STARTED
   AI_CONVERSATION_ENDED
+}
+
+enum SlotStatus {
+  AVAILABLE
+  PARTIALLY_BOOKED
+  FULLY_BOOKED
+  CANCELLED
+  BLACKOUT
 }
 
 // ─── Tenant ───────────────────────────────────────────────────────────────────
@@ -140,6 +156,7 @@ model Tenant {
   bookings       Booking[]
   availability   AvailabilityRule[]
   blockedPeriods BlockedPeriod[]
+  generatedSlots GeneratedSlot[]
   webhooks       Webhook[]
   apiKeys        ApiKey[]
   auditLogs      AuditLog[]
@@ -228,6 +245,7 @@ model User {
   aiMemories      AiMemory[]
   aiConversations AiConversation[]
   sentInvites     InviteToken[]    @relation("InviteSender")
+  waitlistEntries WaitlistEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -382,6 +400,7 @@ model TrainerProfile {
   blockedPeriods         BlockedPeriod[]
   services               TrainerService[]
   bookings               Booking[]       @relation("TrainerBookings")
+  generatedSlots         GeneratedSlot[]
   commissions            Commission[]
   payouts                Payout[]
   splitRules             RevenueSplitRule[]
@@ -423,6 +442,7 @@ model Location {
   availability   AvailabilityRule[]
   blockedPeriods BlockedPeriod[]
   bookings       Booking[]
+  slots          GeneratedSlot[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -453,6 +473,7 @@ model Service {
   trainers             TrainerService[]
   availability         AvailabilityRule[]
   bookings             Booking[]
+  slots                GeneratedSlot[]
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 
@@ -709,6 +730,58 @@ model ApiKey {
 
   @@index([tenantId])
   @@index([keyHash])
+}
+
+// ─── Scheduling ──────────────────────────────────────────────────────────────
+
+model GeneratedSlot {
+  id           String          @id @default(cuid())
+  tenantId     String
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  trainerId    String?
+  trainer      TrainerProfile? @relation(fields: [trainerId], references: [id])
+  serviceId    String
+  service      Service         @relation(fields: [serviceId], references: [id])
+  locationId   String?
+  location     Location?       @relation(fields: [locationId], references: [id])
+  startsAt     DateTime
+  endsAt       DateTime
+  timezone     String          @default("UTC")
+  status       SlotStatus      @default(AVAILABLE)
+  capacity     Int             @default(1)
+  bookedCount  Int             @default(0)
+  holdCount    Int             @default(0)
+  sourceRuleId String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  waitlist     WaitlistEntry[]
+
+  @@unique([trainerId, serviceId, startsAt])
+  @@index([tenantId, startsAt, status])
+  @@index([trainerId, startsAt])
+  @@index([serviceId, startsAt])
+  @@index([startsAt, endsAt])
+  @@index([tenantId, status])
+}
+
+model WaitlistEntry {
+  id         String        @id @default(cuid())
+  tenantId   String
+  slotId     String
+  slot       GeneratedSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  position   Int
+  notifiedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([slotId, userId])
+  @@index([slotId, position])
+  @@index([userId])
+  @@index([tenantId])
 }
 
 // ─── Audit Log ───────────────────────────────────────────────────────────────
