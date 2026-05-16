@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth";
 import { newRefreshTokenPair, signAccessToken } from "@/lib/auth/tokens";
 import { createSession } from "@/lib/auth/session";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { apiError, handleError } from "@/lib/api-response";
+import { jsonWithSessionCookies } from "@/lib/auth/session-cookies";
 import { LoginSchema } from "@famm/shared";
 
 // Pre-computed bcrypt hash of an unlikely password. Used to keep the
@@ -68,18 +69,24 @@ export async function POST(request: NextRequest) {
       sid: session.sessionId,
     });
 
-    return apiSuccess({
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: membership.role,
-        tenantId: tenant.id,
+    return jsonWithSessionCookies(
+      {
+        success: true,
+        data: {
+          accessToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: membership.role,
+            tenantId: tenant.id,
+          },
+        },
+        meta: { timestamp: new Date().toISOString(), version: "1.0" },
       },
-    });
+      { accessToken, refreshToken }
+    );
   } catch (err) {
     return handleError(err);
   }

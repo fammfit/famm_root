@@ -3,8 +3,7 @@ import { redis } from "@/lib/redis";
 import { generateSecureToken, hashToken } from "./tokens";
 import { MAGIC_LINK_TTL_MINUTES } from "@famm/auth";
 
-const RATE_LIMIT_KEY = (email: string, tenantId: string) =>
-  `magic-link:rl:${tenantId}:${email}`;
+const RATE_LIMIT_KEY = (email: string, tenantId: string) => `magic-link:rl:${tenantId}:${email}`;
 const MAX_PER_WINDOW = 3;
 const WINDOW_SECONDS = 10 * 60;
 
@@ -15,7 +14,7 @@ export interface MagicLinkRequest {
 }
 
 export interface MagicLinkResult {
-  token: string;       // Raw token — to be embedded in email link
+  token: string; // Raw token — to be embedded in email link
   expiresAt: Date;
 }
 
@@ -72,11 +71,7 @@ export async function verifyMagicLink({
     where: { tokenHash },
   });
 
-  if (
-    !record ||
-    record.email !== email.toLowerCase() ||
-    record.tenantId !== tenantId
-  ) {
+  if (!record || record.email !== email.toLowerCase() || record.tenantId !== tenantId) {
     throw new Error("INVALID_TOKEN");
   }
 
@@ -108,7 +103,10 @@ export function buildMagicLinkUrl(
   email: string,
   tenantSlug: string
 ): string {
-  const url = new URL("/api/v1/auth/magic-link/verify", baseUrl);
+  // Point at the SPA landing page rather than the API directly. The page
+  // calls the verify endpoint, handles success + error UX, and falls back
+  // to ErrorState on expired / used / invalid tokens.
+  const url = new URL("/auth/magic-link", baseUrl);
   url.searchParams.set("token", token);
   url.searchParams.set("email", email);
   url.searchParams.set("tenant", tenantSlug);

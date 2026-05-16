@@ -4,7 +4,8 @@ import { redis } from "@/lib/redis";
 import { verifySmsOtp } from "@/lib/auth/sms-otp";
 import { createSession } from "@/lib/auth/session";
 import { newRefreshTokenPair, signAccessToken } from "@/lib/auth/tokens";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { apiError, handleError } from "@/lib/api-response";
+import { jsonWithSessionCookies } from "@/lib/auth/session-cookies";
 import { writeAuditLog } from "@/lib/audit";
 import { SmsOtpVerifySchema } from "@famm/shared";
 
@@ -104,11 +105,22 @@ export async function POST(request: NextRequest) {
       ipAddress: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
     });
 
-    return apiSuccess({
-      accessToken,
-      refreshToken,
-      user: { id: user.id, phone: user.phone, role: membership.role, tenantId: tenant.id },
-    });
+    return jsonWithSessionCookies(
+      {
+        success: true,
+        data: {
+          accessToken,
+          user: {
+            id: user.id,
+            phone: user.phone,
+            role: membership.role,
+            tenantId: tenant.id,
+          },
+        },
+        meta: { timestamp: new Date().toISOString(), version: "1.0" },
+      },
+      { accessToken, refreshToken }
+    );
   } catch (err) {
     return handleError(err);
   }
