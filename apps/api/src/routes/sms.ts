@@ -30,14 +30,21 @@ sms.post("/twilio/inbound", async (c) => {
   const formText = await c.req.text();
   const params = parseForm(formText);
 
-  // Twilio signs the publicly-reachable URL. Behind a proxy we trust
-  // X-Forwarded-Proto/Host; in dev the request URL is fine.
-  const forwardedProto = c.req.header("x-forwarded-proto");
-  const forwardedHost = c.req.header("x-forwarded-host") ?? c.req.header("host");
-  const url =
-    forwardedProto && forwardedHost
-      ? `${forwardedProto}://${forwardedHost}${c.req.path}`
-      : c.req.url;
+  // Twilio signs the publicly-reachable URL. Behind a proxy we use the
+  // operator-configured public URL (TWILIO_WEBHOOK_BASE_URL) rather than
+  // trusting X-Forwarded-* headers. Attackers who can reach the origin
+  // directly can otherwise spoof those headers to make their own request
+  // signature-validate against a URL they control.
+  const webhookBase = process.env["TWILIO_WEBHOOK_BASE_URL"];
+  let url: string;
+  if (webhookBase) {
+    url = `${webhookBase.replace(/\/$/, "")}${c.req.path}`;
+  } else if (process.env["NODE_ENV"] === "production") {
+    return c.json({ error: "TWILIO_WEBHOOK_BASE_URL must be set in production" }, 500);
+  } else {
+    // Dev fallback: the request URL is fine when there's no proxy in front.
+    url = c.req.url;
+  }
 
   const ok = validateTwilioSignature({ authToken, url, params, signature });
   if (!ok) {

@@ -38,10 +38,50 @@ export interface ButtonProps
   loading?: boolean;
 }
 
+function warnButtonContract(props: ButtonProps): void {
+  if (process.env.NODE_ENV === "production") return;
+  const { variant, size, "aria-label": ariaLabel, "aria-labelledby": ariaLabelledBy } = props;
+  if (variant === "destructive" && size === "sm") {
+    console.warn(
+      '[@famm/ui Button] variant="destructive" + size="sm" is forbidden by spec ' +
+        "(docs/design-system/components/button.md §2). Use size=\"md\" or larger.",
+    );
+  }
+  if (variant === "link" && size === "icon") {
+    console.warn(
+      '[@famm/ui Button] variant="link" + size="icon" is forbidden by spec ' +
+        "(docs/design-system/components/button.md §2).",
+    );
+  }
+  if (size === "icon" && !ariaLabel && !ariaLabelledBy) {
+    console.warn(
+      '[@famm/ui Button] size="icon" requires aria-label or aria-labelledby ' +
+        "(docs/design-system/components/button.md §6).",
+    );
+  }
+}
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, loading = false, children, disabled, ...props }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      loading = false,
+      type = "button",
+      children,
+      disabled,
+      ...props
+    },
+    ref,
+  ) => {
+    warnButtonContract({ variant, size, ...props });
     return (
       <button
+        // Default to type="button" so a Button inside a <form> never
+        // auto-submits unless the caller explicitly opts in with
+        // type="submit". See button.md §10 #14.
+        type={type}
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled ?? loading}

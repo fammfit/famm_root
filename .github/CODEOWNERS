@@ -19,3 +19,90 @@
 # Workflows that gate UI changes.
 /.github/workflows/tokens-sync.yml       @fammfit/design-system
 /.github/workflows/visual-regression.yml @fammfit/design-system
+# Handles below are placeholders. Replace with real GitHub usernames or
+# team handles (e.g. @fammfit/design-system) once those exist. A team
+# handle is preferred over individual usernames once the team has more
+# than one member.
+#
+# Path patterns follow the GitHub CODEOWNERS spec:
+#   https://docs.github.com/en/repositories/managing-your-repositories-settings-and-security/customizing-your-repository/about-code-owners
+#
+# The last matching pattern wins, so order specific paths AFTER general
+# ones.
+
+# ---------------------------------------------------------------------
+# Design system — visual / interaction language, tokens, components.
+# These are the single source of truth for "how the product looks and
+# feels." Changes here ripple everywhere, so they require the design
+# lead.
+# ---------------------------------------------------------------------
+
+# Design-system documentation (strategy, guides, per-component specs).
+# /design-system/ is the canonical doc tree.
+/design-system/                              @design-lead
+/docs/design-system/                         @design-lead
+/docs/DESIGN_SYSTEM.md                       @design-lead
+/docs/FIGMA_GUIDE.md                         @design-lead
+/docs/FIGMA_VARIABLES.md                     @design-lead
+/docs/FIGMA_COMPONENT_TEMPLATE.md            @design-lead
+
+# Token sources and generated files. The design lead owns naming and
+# values; the frontend lead reviews the generator and consumption.
+/packages/ui/src/tokens/                     @design-lead @frontend-lead
+/scripts/generate-tokens.mjs                 @design-lead @frontend-lead
+
+# ---------------------------------------------------------------------
+# UI source code — primitives, patterns, and feature components.
+# The frontend lead owns implementation quality; the design lead owns
+# visual conformance.
+# ---------------------------------------------------------------------
+
+# Shared UI library (L1 primitives + L2 patterns).
+/packages/ui/                                @frontend-lead @design-lead
+
+# Feature-level UI inside the web app. Generic Next.js conventions:
+# `src/components` and `app/components` are both listed so this file
+# stays useful if the repo restructures.
+/src/components/                             @frontend-lead
+/app/components/                             @frontend-lead
+/apps/web/src/components/                    @frontend-lead
+
+# Design-system ESLint rules — these enforce the contract in CI.
+/packages/config/eslint/design-system.js     @design-lead @frontend-lead
+
+# ---------------------------------------------------------------------
+# AI assistant configuration — rules and slash commands that govern
+# how AI agents write code in this repository. The design lead reviews
+# because these rules carry design-system policy; the frontend lead
+# reviews because they affect how Cursor / Claude generate code.
+# ---------------------------------------------------------------------
+
+# Cursor rule files.
+/.cursor/                                    @design-lead @frontend-lead
+/.cursor/rules/                              @design-lead @frontend-lead
+
+# Claude Code agent / hook / command configuration.
+/.claude/                                    @design-lead @frontend-lead
+/.claude/commands/                           @design-lead @frontend-lead
+/CLAUDE.md                                   @design-lead @frontend-lead
+
+# ---------------------------------------------------------------------
+# Repository governance — CI workflows, PR templates, this file.
+# The product lead is added here because release gating and merge
+# policy intersect with product process.
+# ---------------------------------------------------------------------
+
+# Everything inside .github (workflows, templates, issue forms, this
+# CODEOWNERS file itself).
+/.github/                                    @frontend-lead @product-lead
+
+# Workflows that gate UI changes specifically — design lead added so
+# changes to the visual-regression / token-sync pipelines don't slip
+# through unreviewed.
+/.github/workflows/tokens-sync.yml           @design-lead @frontend-lead
+/.github/workflows/visual-regression.yml     @design-lead @frontend-lead
+
+# Pull-request template and this CODEOWNERS file — both encode policy,
+# so all three leads are required.
+/.github/pull_request_template.md            @design-lead @frontend-lead @product-lead
+/.github/CODEOWNERS                          @design-lead @frontend-lead @product-lead

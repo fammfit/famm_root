@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 import { getInviteByToken, acceptInvite } from "@/lib/auth/invite";
 import { createSession } from "@/lib/auth/session";
 import { issueTokenBundle } from "@/lib/auth/tokens";
+import { secureCookieFlag } from "@/lib/auth/cookies";
 import { writeAuditLog } from "@/lib/audit";
 import { apiSuccess, apiError, handleError } from "@/lib/api-response";
 import { AcceptInviteSchema } from "@famm/shared";
@@ -117,17 +118,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     });
 
     const response = apiSuccess({ user: { id: user.id, email: user.email, role } });
+    const secure = secureCookieFlag();
     response.cookies.set("access_token", accessToken, {
       httpOnly: true,
-      secure: process.env["NODE_ENV"] === "production",
+      secure,
       sameSite: "lax",
       maxAge: 60 * 15,
       path: "/",
     });
     response.cookies.set("refresh_token", refreshToken, {
       httpOnly: true,
-      secure: process.env["NODE_ENV"] === "production",
-      sameSite: "lax",
+      secure,
+      sameSite: "strict",
       maxAge: 60 * 60 * 24 * 30,
       path: "/api/v1/auth/refresh",
     });

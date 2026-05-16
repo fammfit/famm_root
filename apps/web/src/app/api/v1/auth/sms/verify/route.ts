@@ -1,14 +1,32 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { redis } from "@/lib/redis";
 import { verifySmsOtp } from "@/lib/auth/sms-otp";
 import { createSession } from "@/lib/auth/session";
-import { issueTokenBundle } from "@/lib/auth/tokens";
+import { newRefreshTokenPair, signAccessToken } from "@/lib/auth/tokens";
 import { apiSuccess, apiError, handleError } from "@/lib/api-response";
 import { writeAuditLog } from "@/lib/audit";
 import { SmsOtpVerifySchema } from "@famm/shared";
 
+// HTTP-layer rate limit on the verify endpoint. The DB-side per-OTP attempt
+// counter (max 5) only protects a single OTP record. Without an HTTP cap,
+// an attacker who can request many OTPs can keep guessing in parallel.
+const VERIFY_RATE_LIMIT_KEY = (ip: string) => `sms-otp:verify-rl:${ip}`;
+const VERIFY_MAX_PER_WINDOW = 20;
+const VERIFY_WINDOW_SECONDS = 10 * 60;
+
 export async function POST(request: NextRequest) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? request.ip ?? "unknown";
+
+    const rlKey = VERIFY_RATE_LIMIT_KEY(ip);
+    const count = await redis.incr(rlKey);
+    if (count === 1) await redis.expire(rlKey, VERIFY_WINDOW_SECONDS);
+    if (count > VERIFY_MAX_PER_WINDOW) {
+      return apiError("RATE_LIMITED", "Too many attempts, slow down", 429);
+    }
+
     const body = (await request.json()) as unknown;
     const { phone, code, tenantSlug } = SmsOtpVerifySchema.parse(body);
 
@@ -55,28 +73,25 @@ export async function POST(request: NextRequest) {
 
     const membership = user.memberships[0] ?? { role: "CLIENT" as const, permissions: [] };
 
+    const { refreshToken, refreshTokenHash } = newRefreshTokenPair();
+
     const session = await createSession({
       userId: user.id,
       tenantId: tenant.id,
       email: user.email,
       role: membership.role,
       authMethod: "SMS_OTP",
-      refreshTokenHash: "placeholder",
+      refreshTokenHash,
       ipAddress: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
       userAgent: request.headers.get("user-agent") ?? undefined,
     });
 
-    const { accessToken, refreshToken, refreshTokenHash } = await issueTokenBundle({
+    const accessToken = await signAccessToken({
       sub: user.id,
       email: user.email,
       tenantId: tenant.id,
       role: membership.role,
       sid: session.sessionId,
-    });
-
-    await prisma.session.update({
-      where: { id: session.sessionId },
-      data: { refreshTokenHash },
     });
 
     writeAuditLog({

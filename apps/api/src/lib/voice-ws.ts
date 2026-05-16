@@ -17,6 +17,7 @@ import {
   type PaymentsClient,
 } from "@famm/ai";
 import { prisma } from "@famm/db";
+import { getJwtSecret, JWT_ISSUER, JWT_AUDIENCE_VOICE } from "@famm/auth";
 
 /**
  * Twilio Media Streams ↔ VoiceOrchestrator WebSocket bridge.
@@ -34,10 +35,6 @@ import { prisma } from "@famm/db";
  *   4. On `stop` or socket close, we tear down the orchestrator and
  *      finalize the conversation row.
  */
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env["JWT_SECRET"] ?? "dev-secret-change-in-production"
-);
 
 interface VoiceTokenPayload {
   tenantId: string;
@@ -70,7 +67,10 @@ export function attachVoiceWebSocket(args: AttachVoiceWebSocketArgs): WebSocketS
           socket.destroy();
           return;
         }
-        const { payload } = await jwtVerify(token, JWT_SECRET);
+        const { payload } = await jwtVerify(token, getJwtSecret(), {
+          issuer: JWT_ISSUER,
+          audience: JWT_AUDIENCE_VOICE,
+        });
         const claims = payload as unknown as VoiceTokenPayload;
         if (!claims.tenantId || !claims.callSid) {
           socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
@@ -290,9 +290,7 @@ async function startOrchestrator(args: {
     userId: session.userId ?? "unknown",
     timezone: session.timezone,
     currency: session.currency,
-    ...(tenantSettings?.aiPersonaName
-      ? { personaName: tenantSettings.aiPersonaName }
-      : {}),
+    ...(tenantSettings?.aiPersonaName ? { personaName: tenantSettings.aiPersonaName } : {}),
     ...(tenantSettings?.aiSystemPrompt
       ? { tenantSystemPrompt: tenantSettings.aiSystemPrompt }
       : {}),

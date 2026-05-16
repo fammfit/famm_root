@@ -4,22 +4,20 @@ import { jwtVerify } from "jose";
 import { processMessage, type PaymentsClient } from "@famm/ai";
 import { prisma } from "@famm/db";
 import type { JwtPayload } from "@famm/types";
+import { getJwtSecret, JWT_ISSUER, JWT_AUDIENCE_WEB, JWT_AUDIENCE_API } from "@famm/auth";
 
 /**
  * WebSocket architecture:
  *
  *   - One WSS attached to the existing HTTP server at /ws/ai.
- *   - The client must present a JWT in the `Sec-WebSocket-Protocol` header
- *     (subprotocol: `bearer.<token>`) or as a `?token=` query param.
+ *   - The client must present a JWT via the `Sec-WebSocket-Protocol`
+ *     subprotocol header (`bearer.<token>`). Query-string tokens are
+ *     rejected because they leak to proxy logs / referrers.
  *   - The connection is bound to a single (tenant, user, conversation).
  *     Frames from one socket cannot influence another user's session.
  *   - Inbound frames are JSON: `{type: "user_message", content: string}`.
  *   - Outbound frames mirror the StreamChunk shape from @famm/types.
  */
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env["JWT_SECRET"] ?? "dev-secret-change-in-production"
-);
 
 interface SocketState {
   user: JwtPayload;
@@ -41,13 +39,16 @@ export function attachAiWebSocket(args: {
 
     void (async () => {
       try {
-        const token = extractToken(req.headers, url);
+        const token = extractToken(req.headers);
         if (!token) {
           socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
           socket.destroy();
           return;
         }
-        const { payload } = await jwtVerify(token, JWT_SECRET);
+        const { payload } = await jwtVerify(token, getJwtSecret(), {
+          issuer: JWT_ISSUER,
+          audience: [JWT_AUDIENCE_WEB, JWT_AUDIENCE_API],
+        });
         const user = payload as unknown as JwtPayload;
 
         const tenantSettings = await prisma.tenantSettings.findUnique({
@@ -84,15 +85,17 @@ export function attachAiWebSocket(args: {
   return wss;
 }
 
-function extractToken(
-  headers: Record<string, string | string[] | undefined>,
-  url: URL
-): string | null {
-  const queryToken = url.searchParams.get("token");
-  if (queryToken) return queryToken;
+function extractToken(headers: Record<string, string | string[] | undefined>): string | null {
+  // Header-only: query-string tokens leak via proxy access logs, browser
+  // history, and APM tooling.
   const proto = headers["sec-websocket-protocol"];
   const raw = Array.isArray(proto) ? proto[0] : proto;
-  if (raw && raw.startsWith("bearer.")) return raw.slice("bearer.".length);
+  if (!raw) return null;
+  // Subprotocols can be comma-separated.
+  const candidates = raw.split(",").map((s) => s.trim());
+  for (const c of candidates) {
+    if (c.startsWith("bearer.")) return c.slice("bearer.".length);
+  }
   return null;
 }
 

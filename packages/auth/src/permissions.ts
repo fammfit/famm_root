@@ -54,6 +54,10 @@ export type Permission =
   | "audit:read"
   | "invites:create"
   | "invites:revoke"
+  // Scheduling
+  | "availability:read"
+  | "availability:write"
+  | "member:delete"
   // Platform (super-admin only)
   | "platform:admin";
 
@@ -96,6 +100,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "user:update:profile",
     "tenant:read",
     "service:read",
+    "availability:read",
+    "availability:write",
     "ai:chat",
     "reports:own",
     "trainer:commission",
@@ -114,6 +120,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "user:update:profile",
     "tenant:read",
     "service:read",
+    "availability:read",
+    "availability:write",
+    "member:delete",
     "trainer:assign",
     "trainer:commission",
     "trainer:hierarchy:manage",
@@ -143,6 +152,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "service:create",
     "service:update",
     "service:delete",
+    "availability:read",
+    "availability:write",
+    "member:delete",
     "trainer:assign",
     "trainer:commission",
     "trainer:hierarchy:manage",
@@ -178,6 +190,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "service:create",
     "service:update",
     "service:delete",
+    "availability:read",
+    "availability:write",
+    "member:delete",
     "trainer:assign",
     "trainer:commission",
     "trainer:hierarchy:manage",
@@ -227,6 +242,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "audit:read",
     "invites:create",
     "invites:revoke",
+    "availability:read",
+    "availability:write",
+    "member:delete",
     "platform:admin",
   ],
 };

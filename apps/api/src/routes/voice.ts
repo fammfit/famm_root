@@ -19,12 +19,9 @@ import {
 } from "@famm/ai";
 import { prisma } from "@famm/db";
 import type { JwtPayload } from "@famm/types";
+import { getJwtSecret, JWT_ISSUER, JWT_AUDIENCE_VOICE } from "@famm/auth";
 
 const voice = new Hono();
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env["JWT_SECRET"] ?? "dev-secret-change-in-production"
-);
 
 const STREAM_TOKEN_TTL_SECONDS = 60 * 30; // 30 minutes — covers max call length.
 
@@ -53,6 +50,17 @@ function parseForm(text: string): Record<string, string> {
 }
 
 function publicUrl(c: Context, path: string): string {
+  // Prefer the operator-configured public base; only fall back to forwarded
+  // headers in dev. Trusting X-Forwarded-* in prod lets an attacker that
+  // can reach the origin steer Twilio to call URLs they control on the
+  // next leg of the call (callbacks, transfer endpoints).
+  const configured = process.env["TWILIO_WEBHOOK_BASE_URL"] ?? process.env["PUBLIC_API_URL"];
+  if (configured) {
+    return new URL(path, configured).toString();
+  }
+  if (process.env["NODE_ENV"] === "production") {
+    throw new Error("TWILIO_WEBHOOK_BASE_URL or PUBLIC_API_URL must be set in production");
+  }
   const proto = c.req.header("x-forwarded-proto") ?? "https";
   const host = c.req.header("x-forwarded-host") ?? c.req.header("host");
   const base = host ? `${proto}://${host}` : c.req.url;
@@ -68,15 +76,14 @@ function wssUrl(c: Context, path: string, token: string): string {
   return u.toString();
 }
 
-async function mintStreamToken(args: {
-  tenantId: string;
-  callSid: string;
-}): Promise<string> {
+async function mintStreamToken(args: { tenantId: string; callSid: string }): Promise<string> {
   return new SignJWT({ tenantId: args.tenantId, callSid: args.callSid })
     .setProtectedHeader({ alg: "HS256" })
+    .setIssuer(JWT_ISSUER)
+    .setAudience(JWT_AUDIENCE_VOICE)
     .setIssuedAt()
     .setExpirationTime(`${STREAM_TOKEN_TTL_SECONDS}s`)
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 async function verifyTwilio(c: Context): Promise<{
@@ -397,13 +404,7 @@ voice.post("/status", async (c) => {
 const placeCallBody = z.object({
   to: z.string().min(5),
   userId: z.string().min(1),
-  intent: z.enum([
-    "reminder",
-    "waitlist_fulfillment",
-    "trainer_utilization",
-    "booking",
-    "custom",
-  ]),
+  intent: z.enum(["reminder", "waitlist_fulfillment", "trainer_utilization", "booking", "custom"]),
   brief: z.string().min(1).max(2000).optional(),
   label: z.string().max(120).optional(),
   reminder: z
@@ -469,24 +470,16 @@ placeRouter.post("/place", async (c) => {
 
   const twilio = buildTwilioClientFromEnv();
   if (!twilio) {
-    return c.json(
-      { success: false, error: { code: "TWILIO_NOT_CONFIGURED" } },
-      500
-    );
+    return c.json({ success: false, error: { code: "TWILIO_NOT_CONFIGURED" } }, 500);
   }
 
   const publicApiUrl = process.env["PUBLIC_API_URL"];
   if (!publicApiUrl) {
-    return c.json(
-      { success: false, error: { code: "PUBLIC_API_URL_NOT_SET" } },
-      500
-    );
+    return c.json({ success: false, error: { code: "PUBLIC_API_URL_NOT_SET" } }, 500);
   }
 
   const brief =
-    body.brief ??
-    deriveBriefForIntent(body, tenant.timezone) ??
-    `Place a ${body.intent} call.`;
+    body.brief ?? deriveBriefForIntent(body, tenant.timezone) ?? `Place a ${body.intent} call.`;
 
   const placed = await placeOutboundCall(
     {
