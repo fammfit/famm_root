@@ -1,0 +1,110 @@
+---
+description: Component usage rules. Reuse > extend > create. Never duplicate.
+globs:
+  - "apps/web/**/*.{ts,tsx}"
+  - "packages/ui/**/*.{ts,tsx}"
+alwaysApply: true
+---
+
+# Component Usage
+
+## Mandatory reuse step
+
+Before creating *any* new component:
+
+1. Search `packages/ui/src/components/{primitives,patterns}` and the
+   exports in `packages/ui/src/index.ts`.
+2. If a component with a similar name **or** similar purpose exists:
+   - Use it as-is, or
+   - **Add a variant** to its `cva()` config — do not fork.
+3. If nothing matches, decide tier (`01-ux-ui-system.mdc`) and proceed.
+
+You may not skip step 1. If you produce a component that duplicates an
+existing one, the review will reject it.
+
+## Currently available (read this list before suggesting "I'll create…")
+
+| Primitive (L1) | Import from `@famm/ui` |
+|----------------|------------------------|
+| `Button`, `buttonVariants` | yes |
+| `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter` | yes |
+| `Input` | yes |
+| `Badge`, `badgeVariants` | yes |
+| `Spinner` | yes |
+
+| Pattern (L2) | Import from `@famm/ui` |
+|--------------|------------------------|
+| `FormField` | yes |
+| `StatCard` | yes |
+| `SessionTimer` | yes |
+
+| Hook | Import from `@famm/ui` |
+|------|------------------------|
+| `useReducedMotion` | yes |
+
+If you need behavior beyond what's here, extend the closest match. If
+nothing is close, propose a new component in your reply (with the file
+path, tier, and a one-line API sketch) and **wait** before scaffolding.
+
+## Conventions
+
+- File names: `kebab-case.tsx`. Components: `PascalCase`. Variant values:
+  `kebab-case` lowercase.
+- Use `React.forwardRef` for any component wrapping an HTML element.
+- Use `cva()` for variant-driven styling — never `if (variant === ...)`
+  inside JSX.
+- Use `cn()` from `@famm/ui` for className merging.
+- Export named prop types (`ButtonProps`), not inline.
+- Default exports are reserved for Next.js pages and config files.
+
+## Use semantic HTML
+
+- `<button>` for buttons. Never `<div onClick>`.
+- `<a>` for navigation. Never `<button>` styled as a link unless it
+  triggers an action.
+- `<form>` wraps form controls. Submission goes through `onSubmit`, not
+  `onClick` on the button.
+- Lists use `<ul>` / `<ol>` / `<li>`. Definition pairs use `<dl>`.
+- Headings are sequential: a page has one `<h1>`; sections nest.
+- Landmarks: `<main>`, `<nav>`, `<aside>`, `<header>`, `<footer>` — one
+  `<main>` per page.
+- Tables are `<table>` with `<th scope>`. Never grid-divs for tabular data.
+
+## Never (review will reject)
+
+- New component that duplicates an existing one with a different name.
+- Variants encoded as boolean props (`<Card raised highlighted compact>`)
+  instead of `variant="..."`.
+- `className` prop used to override foundational styling (color, padding
+  scale, radius) — those come from variants.
+- Importing a new component library (shadcn-fork, MUI, Mantine) or icon
+  set (we use `lucide-react`).
+- Inline SVG when `lucide-react` has the icon.
+- `packages/ui` importing from `apps/web` (inverts dependency).
+- Files named `Button.tsx`, `Card.tsx`, etc. anywhere in `apps/web/src/`
+  that re-implement the existing primitives.
+
+## State coverage — all four, every time
+
+A list or fetch surface must handle:
+
+| State | Required shape |
+|-------|----------------|
+| Loading | Skeleton matching the final layout. Not a centered spinner unless the surface is < 200px tall. |
+| Empty | One sentence + one primary action. |
+| Error | Plain-language summary + retry button. Surface details via `<details>` if actionable. |
+| Loaded | Content. |
+
+Implement the four in the component, not the page. The page passes
+props; it doesn't re-implement states.
+
+## After editing — explain
+
+End your reply with a `Design-system decisions:` block listing:
+
+- Reused: `Button` from `@famm/ui` (extended `variant="ghost"`).
+- New file: `apps/web/src/components/bookings/booking-row.tsx` (L3).
+- Skipped: did not create `BookingCard` — reused `StatCard` with
+  `tone="default"` and a custom caption.
+- `OPEN:` Should this become an L2 pattern after the second feature uses
+  it?

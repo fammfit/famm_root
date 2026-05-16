@@ -1,0 +1,26 @@
+{
+  "$comment": "Border-radius tokens. Three semantic sizes plus a sharp option. Pick by element type, not by 'small / medium / large'. Code source of truth: packages/ui/src/tokens/tokens.json (semantic.radius).",
+  "$schema": "https://schemas.famm.fit/design-tokens/v1",
+  "radius": {
+    "none": {
+      "value": "0px",
+      "usage": "Reserved for full-bleed surfaces and tabular cells. Avoid in product UI.",
+      "notes": "Tailwind: rounded-none."
+    },
+    "control": {
+      "value": "8px",
+      "usage": "Buttons, inputs, badges, checkboxes, segmented controls.",
+      "notes": "Tailwind: rounded-control. All interactive primitives use this by default."
+    },
+    "card": {
+      "value": "12px",
+      "usage": "Cards, sheets, popovers, modals, raised panels.",
+      "notes": "Tailwind: rounded-card. The Card primitive ships with this radius."
+    },
+    "pill": {
+      "value": "9999px",
+      "usage": "Tags, avatars, fully-rounded badges, status pills.",
+      "notes": "Tailwind: rounded-pill. Equivalent to rounded-full in Tailwind defaults — kept as a named token for intent clarity."
+    }
+  }
+}

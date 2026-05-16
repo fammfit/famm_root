@@ -1,0 +1,138 @@
+{
+  "$comment": "Typography tokens. Path = semantic name (e.g. font.size.body). Size scale matches Tailwind's defaults so utilities like text-base / text-xl map cleanly. Code source of truth: packages/ui/src/tokens/tokens.json (family + scale).",
+  "$schema": "https://schemas.famm.fit/design-tokens/v1",
+  "font": {
+    "family": {
+      "sans": {
+        "value": "InterVariable, ui-sans-serif, system-ui, sans-serif",
+        "usage": "Default for everything — body, UI, headings.",
+        "notes": "Inter Variable is loaded by apps/web at /apps/web/src/app/layout.tsx via next/font."
+      },
+      "mono": {
+        "value": "ui-monospace, SFMono-Regular, Menlo, monospace",
+        "usage": "Code blocks, API examples, ID-style identifiers.",
+        "notes": "Not used in product surfaces; reserved for technical content."
+      }
+    },
+    "size": {
+      "caption": {
+        "value": "12px",
+        "usage": "Captions, fine-print, table footers. Below body in hierarchy.",
+        "notes": "Tailwind: text-xs. Never use for body text on mobile."
+      },
+      "small": {
+        "value": "14px",
+        "usage": "Hints, helper text in forms, metadata in dense lists.",
+        "notes": "Tailwind: text-sm. Below 16px on mobile triggers iOS input zoom — never use for <input> text."
+      },
+      "body": {
+        "value": "16px",
+        "usage": "Default body text. Minimum size for prose on mobile.",
+        "notes": "Tailwind: text-base. Inputs use this size to avoid iOS zoom."
+      },
+      "bodyLarge": {
+        "value": "18px",
+        "usage": "Lead paragraphs, callouts, marketing body.",
+        "notes": "Tailwind: text-lg."
+      },
+      "headingSmall": {
+        "value": "20px",
+        "usage": "Subsection headings (h4-equivalent), inline section labels.",
+        "notes": "Tailwind: text-xl."
+      },
+      "heading": {
+        "value": "24px",
+        "usage": "Section headings (h3-equivalent), card titles.",
+        "notes": "Tailwind: text-2xl. Default page title weight."
+      },
+      "headingLarge": {
+        "value": "30px",
+        "usage": "Page titles (h2-equivalent), dashboard KPI values.",
+        "notes": "Tailwind: text-3xl. Use tabular-nums when displaying numbers."
+      },
+      "display": {
+        "value": "36px",
+        "usage": "Hero KPI numbers (in-session set counter), feature spotlights.",
+        "notes": "Tailwind: text-4xl. Mobile: in-session set counter steps up to text-6xl (60px)."
+      },
+      "displayLarge": {
+        "value": "48px",
+        "usage": "Marketing hero H1 on mobile.",
+        "notes": "Tailwind: text-5xl. Step up to displayXLarge on md+."
+      },
+      "displayXLarge": {
+        "value": "60px",
+        "usage": "Marketing hero H1 on desktop, in-session set counter on mobile.",
+        "notes": "Tailwind: text-6xl."
+      }
+    },
+    "weight": {
+      "regular": {
+        "value": "400",
+        "usage": "Body text, descriptions, captions.",
+        "notes": "Default."
+      },
+      "medium": {
+        "value": "500",
+        "usage": "Form labels, table headers, mild emphasis inside body text.",
+        "notes": "Tailwind: font-medium."
+      },
+      "semibold": {
+        "value": "600",
+        "usage": "Headings, button labels, stat values.",
+        "notes": "Tailwind: font-semibold. Default for headings and primary CTAs."
+      },
+      "bold": {
+        "value": "700",
+        "usage": "Reserved. Marketing display headings only.",
+        "notes": "Avoid in product surfaces — semibold + size is usually enough."
+      }
+    },
+    "lineHeight": {
+      "tight": {
+        "value": "1.1",
+        "usage": "Headings (display and headingLarge sizes).",
+        "notes": "Tailwind: leading-tight."
+      },
+      "snug": {
+        "value": "1.25",
+        "usage": "Sub-headings, button labels, single-line UI text.",
+        "notes": "Tailwind: leading-snug."
+      },
+      "normal": {
+        "value": "1.5",
+        "usage": "Body text, descriptions, captions.",
+        "notes": "Tailwind: leading-normal. Default for prose."
+      },
+      "relaxed": {
+        "value": "1.625",
+        "usage": "Long-form reading surfaces: marketing body, help articles.",
+        "notes": "Tailwind: leading-relaxed."
+      }
+    },
+    "letterSpacing": {
+      "tight": {
+        "value": "-0.02em",
+        "usage": "Display headings (>= 36px). Optical tightening.",
+        "notes": "Tailwind: tracking-tight."
+      },
+      "normal": {
+        "value": "0",
+        "usage": "Default for body and most headings.",
+        "notes": "Tailwind: tracking-normal."
+      },
+      "wide": {
+        "value": "0.05em",
+        "usage": "Uppercase labels (KPI category, table headers, tab labels).",
+        "notes": "Tailwind: tracking-wide. Pair with text-xs uppercase."
+      }
+    },
+    "feature": {
+      "tabularNums": {
+        "value": "tabular-nums",
+        "usage": "Any column of numbers: set counts, weights, durations, money.",
+        "notes": "Tailwind: tabular-nums. Align decimals by tying with text-right where applicable."
+      }
+    }
+  }
+}

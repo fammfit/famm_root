@@ -1,0 +1,150 @@
+---
+description: Design-token rules. No arbitrary colors, spacing, shadows, radii, or typography.
+globs:
+  - "apps/web/**/*.{ts,tsx,css}"
+  - "packages/ui/**/*.{ts,tsx,css,json}"
+alwaysApply: true
+---
+
+# Design Tokens — use them or propose them
+
+## Hard rule: no arbitrary values
+
+In any file outside `packages/ui/src/components/primitives/`:
+
+- **No raw hex** (`#abcdef`).
+- **No raw `px`** literal in strings (`"16px"`, `padding: "12px"`).
+- **No `rgb()` / `rgba()` / `hsl()` / `hsla()`** literals.
+- **No inline `style={}`** on JSX.
+- **No Tailwind default palette** colors in new code: `bg-gray-*`,
+  `text-red-*`, `border-gray-*`, `bg-blue-*`, etc. Use semantic tokens.
+- **No arbitrary Tailwind values** like `text-[14px]`, `bg-[#2E5BFF]`,
+  `p-[18px]`. If a value doesn't exist as a token, add the token.
+
+ESLint catches the literal cases. The Tailwind cases are caught in
+review — and now, by you.
+
+## Token sources
+
+- **Source of truth:** `packages/ui/src/tokens/tokens.json`.
+- **Generated CSS variables:** `packages/ui/src/tokens/tokens.css` — do
+  not edit.
+- **Generated TS const:** `packages/ui/src/tokens/tokens.ts` — do not
+  edit.
+- **Tailwind theme:** `packages/ui/tailwind.config.ts` — surfaces tokens
+  as utilities.
+- **Generator:** `scripts/generate-tokens.mjs` (`npm run tokens:generate`,
+  CI: `npm run tokens:check`).
+
+## What to use, by need
+
+Pick the token whose **intent** matches yours. Don't pick by visual
+match — pick by purpose.
+
+### Color
+
+| Need | Token | Tailwind |
+|------|-------|----------|
+| Page background | `surface.default` | `bg-surface` |
+| Card / sheet background | `surface.raised` | `bg-surface-raised` |
+| Inset zone (list striping, sidebar) | `surface.sunken` | `bg-surface-sunken` |
+| Modal scrim | `surface.overlay` | `bg-surface-overlay` |
+| Body / heading text | `text.primary` | `text-text-primary` |
+| Labels, secondary headings | `text.secondary` | `text-text-secondary` |
+| Hints, captions, timestamps | `text.muted` | `text-text-muted` |
+| Text on inverted surface | `text.inverse` | `text-text-inverse` |
+| Text on accent-filled element | `text.onAccent` | `text-text-onAccent` |
+| Primary action / link | `accent.default` | `bg-accent`, `text-accent` |
+| Hover of accent | `accent.hover` | `hover:bg-accent-hover` |
+| Accent-tinted background | `accent.subtle` | `bg-accent-subtle` |
+| Success (set done, payment) | `signal.success` | `bg-signal-success`, `text-signal-success` |
+| Error / destructive | `signal.danger` | `bg-signal-danger`, `text-signal-danger` |
+| Soft warning | `signal.warning` | `bg-signal-warning`, `text-signal-warning` |
+| **Personal record only** | `signal.pr` | `bg-signal-pr`, `text-signal-pr` |
+| Hairline / card divider | `border.subtle` | `border-border-subtle` |
+| Default form border | `border.default` | `border-border` |
+| High-emphasis divider | `border.strong` | `border-border-strong` |
+| Focus ring | `--color-focus-ring` | `ring` (default ring color) |
+
+### Spacing — pick by intent
+
+Three axes; pick by **direction and purpose**, not just size:
+
+| Token | Direction | Use |
+|-------|-----------|-----|
+| `space.inset.{xs,sm,md,lg,xl}` | inward (padding) | Padding inside containers (`p-inset-md`). |
+| `space.stack.{xs,sm,md,lg,xl}` | vertical (gap/margin) | Gap between stacked elements (`gap-stack-md`). |
+| `space.inline.{xs,sm,md,lg}` | horizontal (gap/margin) | Gap between inline elements (`gap-inline-sm`). |
+
+### Radius
+
+- `rounded-control` — buttons, inputs, badges.
+- `rounded-card` — cards, sheets, panels.
+- `rounded-pill` — pills, avatars, fully-rounded tags.
+
+### Shadow
+
+- `shadow-sm` — subtle elevation (card hairline).
+- `shadow` — default elevation (raised card).
+- `shadow-lg` — modal, popover.
+- `shadow-focus` — focus ring shadow (used by primitives).
+
+### Motion
+
+- Duration: `duration-fast` (120ms) / `base` (200ms) / `slow` (320ms).
+- Easing: `ease-standard` (decelerate) / `ease-emphasized` (signature
+  moments only — PR, completion).
+
+### Typography
+
+- Family: `font-sans` (default) / `font-mono` (numbers in code-y
+  contexts).
+- Sizes: use the Tailwind type scale (`text-xs … text-3xl`). Body text
+  is **16px minimum** (`text-base`). Never use `text-sm` for body copy
+  on mobile.
+- **Tabular numbers** for any column of numbers: `tabular-nums`.
+
+## Adding a token
+
+1. Add to `packages/ui/src/tokens/tokens.json` under the right layer
+   (`primitive.*`, `semantic.{light,dark}.*`, etc.).
+2. Run `npm run tokens:generate`.
+3. Surface it in `packages/ui/tailwind.config.ts` if it should be a
+   utility.
+4. Document it in `design-system/tokens/README.md`.
+5. Record in `design-system/changelog.md` under `[Unreleased]`.
+6. Mention the new token in your `Design-system decisions:` reply.
+
+## Bad → good examples
+
+```tsx
+// ❌ Raw hex + raw px + inline style
+<div style={{ backgroundColor: "#2E5BFF", padding: "16px" }}>…</div>
+
+// ✅ Semantic tokens via Tailwind utilities
+<div className="bg-accent p-inset-md">…</div>
+
+// ❌ Tailwind default palette
+<button className="bg-blue-600 hover:bg-blue-700 text-white">…</button>
+
+// ✅ Reuse the primitive — variants already encode this
+import { Button } from "@famm/ui";
+<Button>Save changes</Button>
+
+// ❌ Arbitrary Tailwind value
+<p className="text-[15px] leading-[22px]">…</p>
+
+// ✅ Use the scale. If the scale lacks what you need, add a token.
+<p className="text-base leading-relaxed">…</p>
+```
+
+## After editing — explain
+
+In `Design-system decisions:`:
+
+- Tokens used: `bg-surface-raised`, `text-text-muted`, `gap-stack-md`.
+- New token? Note it: e.g. "added `signal.streak` to `tokens.json` —
+  see changelog entry. **Regenerated tokens** with
+  `npm run tokens:generate`."
+- `OPEN:` if a value didn't fit any existing token and you couldn't
+  decide whether to add one.

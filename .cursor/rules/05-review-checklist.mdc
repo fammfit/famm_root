@@ -1,0 +1,123 @@
+---
+description: Self-review checklist. Runs against your own diff before you finish a UI reply.
+globs:
+  - "apps/web/**/*.{ts,tsx,css}"
+  - "packages/ui/**/*.{ts,tsx,css}"
+alwaysApply: true
+---
+
+# Review & PR Checklist — run against your own diff
+
+When you've finished editing UI, run this list **against your own
+changes** before ending your reply. Tick honestly. If a box can't be
+ticked, explain why in your `Design-system decisions:` block — do not
+tick it anyway.
+
+## Reuse
+
+- [ ] Searched `packages/ui/src/components/{primitives,patterns}` before
+      adding any new component.
+- [ ] If a near-match existed, extended its variants instead of forking.
+- [ ] New components are at the right tier (L1 / L2 / L3) per
+      `01-ux-ui-system.mdc`.
+
+## Tokens & styling
+
+- [ ] No raw hex / `px` / `rgb()` / `hsl()` / inline `style={}` outside
+      L1 primitives.
+- [ ] No Tailwind default palette (`gray-*`, `red-*`, `blue-*`, …) in
+      new code.
+- [ ] No arbitrary Tailwind values (`text-[14px]`, `bg-[#...]`,
+      `p-[18px]`).
+- [ ] If a token was added: `tokens.json` updated → `npm run
+      tokens:generate` run → `design-system/tokens/README.md` updated →
+      `changelog.md` entry added.
+
+## Semantic HTML & a11y
+
+- [ ] Uses `<button>` / `<a>` / `<input>` / `<dialog>` etc., not
+      `<div>`/`<span>` with handlers.
+- [ ] Every interactive element has an accessible name (visible label
+      or `aria-label`).
+- [ ] Keyboard reachable in visual order; Enter/Space activate buttons.
+- [ ] Visible focus ring on every interactive element (no
+      `outline-none` without replacement).
+- [ ] Touch targets ≥ 44×44 on touch viewports.
+- [ ] Form inputs use `FormField` (or another L1 control). No bare
+      `<input>` in feature code.
+- [ ] Errors carry a non-color signal (icon or label) and are
+      announced (`role="alert"`).
+- [ ] Animations branch on `useReducedMotion()` when > 200ms or
+      involving translation.
+- [ ] Live regions (`aria-live`) on changing data (timers, set
+      counters, async results).
+
+## Responsive
+
+- [ ] Mobile-first: default styles target `<sm`; breakpoints add up.
+- [ ] Verified at `375 × 667`, `768 × 1024`, `1280 × 800`.
+- [ ] No horizontal scroll except intentional carousels.
+- [ ] Bottom-pinned primary actions clear the iOS home indicator on
+      full-bleed screens.
+- [ ] In-session UI stays legible in landscape on phones.
+- [ ] Hover-only affordances have a touch equivalent (long-press / kebab
+      menu).
+
+## Content
+
+- [ ] Sentence case on buttons, labels, headings.
+- [ ] Button labels are verb phrases that name the outcome ("Save
+      changes", not "OK").
+- [ ] Errors say what went wrong **and** what to do.
+- [ ] Numbers use `tabular-nums`; weights, time, currency per
+      `content-guidelines.md`.
+
+## States
+
+- [ ] Loading, empty, error, loaded states all exist for any fetch
+      surface.
+- [ ] Async triggers disable + show progress within 100ms.
+- [ ] Destructive actions confirm via dialog, not toast.
+
+## Code hygiene
+
+- [ ] No `console.log` (warn/error allowed).
+- [ ] No `@ts-ignore` without a comment explaining why.
+- [ ] No new dependencies — wrap or extend instead.
+- [ ] Imports follow the order rule (builtin → external → internal →
+      parent → sibling).
+- [ ] `npm run lint`, `typecheck`, `tokens:check` would pass.
+
+## PR description (for the human running PR)
+
+- [ ] UI checklist filled in (the GitHub PR template carries this).
+- [ ] Light + dark screenshots, mobile + desktop attached.
+- [ ] Figma frame linked.
+- [ ] Changelog entry if the system changed.
+
+## Output format — Design-system decisions
+
+Every UI reply ends with this section. Use this exact shape:
+
+```
+Design-system decisions:
+- Reused: <component> from @famm/ui (path: …)
+- Tokens: <list> (intent if non-obvious)
+- A11y: <what was preserved or added>
+- Responsive: <what was verified>
+- OPEN: <anything you weren't sure about, with a specific question>
+```
+
+Keep it tight — three to six bullets, one line each. The reviewer reads
+this to decide what they need to verify manually.
+
+## When you can't tick a box
+
+Say so. Examples:
+
+- "Could not verify dark-mode contrast — please run `--theme=dark` and
+  confirm the `text-text-muted / surface-sunken` pair."
+- "OPEN: rest-timer hits 44×44 on phones but only 40×40 on the
+  detail-list quick-edit. Worth a follow-up?"
+
+Honesty here saves a round-trip in review.

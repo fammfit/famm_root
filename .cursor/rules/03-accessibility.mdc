@@ -1,0 +1,113 @@
+---
+description: Accessibility rules. WCAG 2.2 AA. Binding on every interactive element.
+globs:
+  - "apps/web/**/*.{ts,tsx}"
+  - "packages/ui/**/*.{ts,tsx}"
+alwaysApply: true
+---
+
+# Accessibility
+
+Baseline: **WCAG 2.2 Level AA**. Source of truth:
+`design-system/accessibility.md`. Read it before adding a new
+interaction. The rules below are the binding short version.
+
+## Required on every interactive element
+
+1. **Semantic HTML.** `<button>`, `<a>`, `<input>`, `<select>`,
+   `<textarea>`, `<dialog>` — not `<div>` or `<span>` with handlers.
+2. **Accessible name.** Visible text, `aria-label`, or `aria-labelledby`.
+   Icon-only buttons must have one.
+3. **Keyboard reachable.** Tab order matches visual order. Enter and
+   Space activate buttons identically.
+4. **Visible focus ring.** Never `outline-none` / `outline: none` without
+   a replacement of equal or better contrast. Use the `ring` utility
+   bound to `--color-focus-ring`.
+5. **Touch target 44×44 CSS px** on touch viewports. The `Button`
+   `size="icon"` variant ships at `h-11 w-11`. Icon-only controls in
+   dense rows must have a 44×44 hit area via padding.
+6. **Color is never the only signal.** Errors are red **and** labelled
+   (or carry an icon). PR state is gold **and** carries "PR". Required
+   fields have an asterisk **and** `aria-required`.
+
+## Forms
+
+- **Wrap every input in `FormField`** (`@famm/ui`). Never use a bare
+  `<input>` in feature code.
+- The label is associated with the control via `htmlFor` / `id`. The
+  `FormField` pattern wires this automatically.
+- Errors:
+  - `aria-invalid="true"` on the control.
+  - Error message has `role="alert"` and is linked via
+    `aria-describedby`.
+  - Error text lives below the field, not in a tooltip.
+- Required fields: visible asterisk **and** `aria-required="true"`.
+- Set `autocomplete` where applicable (`email`, `tel`, `current-password`,
+  `one-time-code`, `cc-number`, …).
+- Numbers: `inputMode="numeric"` for reps/weights; `inputMode="decimal"`
+  only when fractions are actually allowed.
+
+## Screen readers
+
+- **Live data** that changes (timers, set counters, async results) is
+  inside an `aria-live="polite"` region.
+- **Critical messages** (failed save, expired session) use
+  `role="alert"` — they announce immediately.
+- **Modals**: `aria-modal="true"` + `aria-labelledby` on the title.
+  Focus is trapped while open; focus returns to the trigger on close.
+- **Decorative icons** carry `aria-hidden="true"`.
+- **Meaningful icons** carry an `aria-label`.
+
+## Keyboard
+
+- **Escape** closes modals, popovers, menus; focus returns to trigger.
+- **Arrow keys** navigate within composite widgets (tabs, listbox,
+  calendar). **Tab** moves between widgets.
+- **Enter/Space** activate buttons identically.
+- **No keyboard traps** outside intentional focus traps (modals).
+
+## Motion & reduced motion
+
+- Animations > 200ms or involving translation must branch on
+  `useReducedMotion()` from `@famm/ui`.
+- Tokens already collapse `--duration-*` to `0ms` inside
+  `prefers-reduced-motion: reduce` — so a transition driven purely by
+  `duration-fast`/`base`/`slow` is reduced for free.
+- No auto-playing video, no parallax, no infinite loops (except active
+  loading indicators).
+
+## Contrast — non-negotiable
+
+- Body text ≥ **4.5:1** against its background.
+- Large text (≥ 18px or ≥ 14px bold) ≥ **3:1**.
+- Meaningful UI graphics (icons, focus rings, form borders) ≥ **3:1**.
+- Tokens are pre-validated. **If you introduce a raw color (you
+  shouldn't — see `04-design-tokens.mdc`), include the contrast ratio
+  in your `Design-system decisions` block.**
+
+## What CI enforces
+
+- `eslint-plugin-jsx-a11y/recommended` + tightened overrides
+  (`no-autofocus`, `click-events-have-key-events`,
+  `no-static-element-interactions`, `anchor-is-valid`).
+- `no-restricted-syntax` bans raw hex/px/rgb and inline `style={}`
+  outside L1 primitives.
+
+## What CI can't catch (you must)
+
+- Logical tab order.
+- `aria-label` text quality (it should describe the *action*, not the
+  *icon*).
+- Live regions actually announcing what the user needs.
+- Focus ring visible against this surface (not just *some* surface).
+- Destructive state still reads as destructive in dark mode.
+
+## After editing — explain
+
+Include in your `Design-system decisions:` block:
+
+- `A11y:` keyboard reachable, focus ring on `<Button>` and custom
+  control, `aria-live` added to set counter, `useReducedMotion` branch
+  on celebrate animation.
+- `OPEN:` items the user must verify manually — screen-reader pass on
+  the new modal, focus order in landscape phone view.

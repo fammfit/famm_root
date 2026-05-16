@@ -1,0 +1,118 @@
+{
+  "$comment": "Color tokens. Path = semantic name (e.g. color.text.primary). Code source of truth: packages/ui/src/tokens/tokens.json. Tailwind utilities: see design-system/tokens/README.md.",
+  "$schema": "https://schemas.famm.fit/design-tokens/v1",
+  "color": {
+    "surface": {
+      "default": {
+        "value": { "light": "#FFFFFF", "dark": "#0F172A" },
+        "usage": "Page background. The base layer that every other surface sits on.",
+        "notes": "Use bg-surface in Tailwind. Pair with text.primary or text.secondary."
+      },
+      "raised": {
+        "value": { "light": "#FFFFFF", "dark": "#1E293B" },
+        "usage": "Cards, sheets, popovers, raised panels.",
+        "notes": "In light mode this matches surface.default; the elevation is signalled by shadow.sm, not by hue."
+      },
+      "sunken": {
+        "value": { "light": "#F8FAFC", "dark": "#020617" },
+        "usage": "Inset zones: list striping, sidebars, code blocks, secondary panels.",
+        "notes": "Use to visually 'inset' a region without adding a border."
+      },
+      "overlay": {
+        "value": { "light": "rgb(15 23 42 / 0.55)", "dark": "rgb(2 6 23 / 0.70)" },
+        "usage": "Modal and sheet scrim. Sits between the surface stack and the dialog.",
+        "notes": "Do not recolor per feature. Always paired with bg-surface-raised on the dialog itself."
+      }
+    },
+    "text": {
+      "primary": {
+        "value": { "light": "#0F172A", "dark": "#F8FAFC" },
+        "usage": "Default body and heading text.",
+        "notes": "Contrast vs surface.default — light 16.7:1, dark 15.4:1. Always AAA."
+      },
+      "secondary": {
+        "value": { "light": "#334155", "dark": "#E2E8F0" },
+        "usage": "Labels, sub-headings, de-emphasized but still important text.",
+        "notes": "Contrast vs surface.default — light 11.0:1, dark 12.0:1."
+      },
+      "muted": {
+        "value": { "light": "#64748B", "dark": "#94A3B8" },
+        "usage": "Hints, captions, timestamps, helper text in forms.",
+        "notes": "Contrast vs surface.default — light 4.9:1, dark 4.6:1 (passes AA for body). Avoid at sizes below 14px."
+      },
+      "inverse": {
+        "value": { "light": "#FFFFFF", "dark": "#0F172A" },
+        "usage": "Text on a deliberately inverted surface (e.g. a dark toast in light mode).",
+        "notes": "Rare. If you reach for this, double-check the design first."
+      },
+      "onAccent": {
+        "value": { "light": "#FFFFFF", "dark": "#FFFFFF" },
+        "usage": "Text on an accent-filled background — primary buttons, accent badges.",
+        "notes": "Always white in both themes by design. Contrast vs accent.default — light 8.1:1, dark 6.2:1."
+      }
+    },
+    "accent": {
+      "default": {
+        "value": { "light": "#2E5BFF", "dark": "#6366F1" },
+        "usage": "Primary action color: buttons, links, focus rings.",
+        "notes": "Reserved for action affordances. Do not paint entire surfaces with it."
+      },
+      "hover": {
+        "value": { "light": "#1E40AF", "dark": "#818CF8" },
+        "usage": "Hover state of accent-default.",
+        "notes": "Light moves darker; dark moves lighter — both increase contrast on hover."
+      },
+      "subtle": {
+        "value": { "light": "#EEF2FF", "dark": "#172554" },
+        "usage": "Accent-tinted backgrounds: selected row, accent badge, info banner.",
+        "notes": "Pair with text.primary or accent.default depending on the surface."
+      }
+    },
+    "signal": {
+      "success": {
+        "value": { "light": "#16A34A", "dark": "#16A34A" },
+        "usage": "Set complete, payment success, save confirmation.",
+        "notes": "Same hue in both themes. For text use signal-success; for fills use signal-success/10 + signal-success text."
+      },
+      "danger": {
+        "value": { "light": "#DC2626", "dark": "#DC2626" },
+        "usage": "Errors, destructive actions, failed states.",
+        "notes": "Contrast vs surface.default — light 5.3:1, dark 5.1:1. Always paired with an icon or label (color is never the only signal)."
+      },
+      "warning": {
+        "value": { "light": "#D97706", "dark": "#D97706" },
+        "usage": "Soft warnings: 'this will affect future bookings', 'low connection'.",
+        "notes": "Use sparingly. Not for errors — that's signal.danger."
+      },
+      "pr": {
+        "value": { "light": "#F59E0B", "dark": "#F59E0B" },
+        "usage": "Reserved for personal-record moments. Reserved means reserved — do not reuse the gold elsewhere.",
+        "notes": "Fails AA for small body text (3.9:1). Use at >= 18px or 14px-bold, or pair with a 'PR' badge fill (bg-signal-pr/15 text-signal-pr)."
+      }
+    },
+    "border": {
+      "subtle": {
+        "value": { "light": "#E2E8F0", "dark": "#1E293B" },
+        "usage": "Card hairlines, list dividers, quiet separations.",
+        "notes": "Default border for raised surfaces."
+      },
+      "default": {
+        "value": { "light": "#CBD5E1", "dark": "#334155" },
+        "usage": "Form controls, surface separation.",
+        "notes": "Contrast vs surface.default — light 1.6:1 (form control border allowed at 3:1 against background — verify before use on tinted surfaces)."
+      },
+      "strong": {
+        "value": { "light": "#64748B", "dark": "#64748B" },
+        "usage": "High-emphasis dividers, focus on dense surfaces, hover state on form controls.",
+        "notes": "Same hue in both themes."
+      }
+    },
+    "focus": {
+      "ring": {
+        "value": { "light": "#2E5BFF", "dark": "#818CF8" },
+        "usage": "Visible focus indicator on every interactive element.",
+        "notes": "Available as the default ring color in Tailwind ('ring' utility) and as --color-focus-ring CSS variable. Paired with shadow-focus for the surrounding glow."
+      }
+    }
+  }
+}

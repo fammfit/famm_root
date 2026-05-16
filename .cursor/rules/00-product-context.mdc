@@ -1,0 +1,64 @@
+---
+description: Product context for FAMM. Always-on. Sets the mental model for every UI decision.
+alwaysApply: true
+---
+
+# Product Context — read first
+
+You are working on **FAMM**, a fitness web app. Before any UI work, you
+**must** ground yourself in the product before you ground yourself in the
+code:
+
+1. Read `design-system/principles.md` — the five tie-breaker principles.
+2. Skim `design-system/ux-rules.md` and `design-system/content-guidelines.md`
+   so your defaults match the product.
+
+If a UI request conflicts with what you find in those files, **stop and
+ask** rather than picking a winner.
+
+## What FAMM is
+
+- A fitness product used by **members** (mid-workout, ~2-second attention
+  budget), **trainers** (managing clients and bookings), and **admins**.
+- Multi-tenant: studios can theme via tokens — themes ride on
+  `data-theme="..."` and primitives don't care.
+- Internal data is SI (kg, seconds, meters). Display is localized.
+
+## Mental model — settle on these words
+
+| Use | Don't use |
+|-----|-----------|
+| Workout | Routine, session (session = trainer appointment) |
+| Exercise | Movement, lift |
+| Set / Rep | Round / Repetition |
+| Trainer | Coach, instructor |
+| Member | Customer, user |
+| Booking | Appointment, reservation |
+| Personal record / PR | Best, milestone |
+
+## Repo shape
+
+- `apps/web` — Next.js 14, product surface.
+- `apps/api` — backend.
+- `packages/ui` (`@famm/ui`) — design system code:
+  - `src/tokens/` — semantic tokens (json source + generated css + ts).
+  - `src/components/primitives/` — **L1**, stable.
+  - `src/components/patterns/` — **L2**, composites.
+  - `src/hooks/` — `useReducedMotion`, future a11y helpers.
+- `design-system/` — DS documentation surface. **Read this before UI
+  work.**
+- `docs/` — architecture, product, system strategy.
+
+## Output protocol — every UI response
+
+After editing UI, end your reply with a short **"Design-system decisions"**
+section. Three to six bullets. Cover:
+
+- Which existing primitive/pattern you reused (with path).
+- Which tokens you used and why (e.g. `signal.pr` for the PR celebration).
+- Any a11y behavior you preserved or added (focus, labels, live region).
+- Any decision you weren't 100% sure on — flag it as `OPEN:` for review.
+
+If a request would require something the design system doesn't have (new
+token, new primitive, deviation from a principle), **do not invent it
+silently** — propose the addition in your reply and wait for confirmation.

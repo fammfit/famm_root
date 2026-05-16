@@ -1,5 +1,24 @@
 # CODEOWNERS — auto-requested reviewers per path.
 #
+# The team handle below is a placeholder. Create the @fammfit/design-system
+# team in GitHub and add members, or replace with individual @handles.
+
+# Design system: anything that ships through @famm/ui or the strategy docs.
+/packages/ui/                            @fammfit/design-system
+/packages/config/eslint/design-system.js @fammfit/design-system
+/docs/DESIGN_SYSTEM.md                   @fammfit/design-system
+/docs/DESIGN_SYSTEM_*.md                 @fammfit/design-system
+/design-system/                          @fammfit/design-system
+/scripts/generate-tokens.mjs             @fammfit/design-system
+
+# AI agent rules — keep in sync with the strategy doc.
+/CLAUDE.md                               @fammfit/design-system
+/.cursor/rules/                          @fammfit/design-system
+/.claude/commands/                       @fammfit/design-system
+
+# Workflows that gate UI changes.
+/.github/workflows/tokens-sync.yml       @fammfit/design-system
+/.github/workflows/visual-regression.yml @fammfit/design-system
 # Handles below are placeholders. Replace with real GitHub usernames or
 # team handles (e.g. @fammfit/design-system) once those exist. A team
 # handle is preferred over individual usernames once the team has more

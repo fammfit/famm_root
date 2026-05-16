@@ -65,12 +65,31 @@ function kebab(parts) {
 
 const semColorPath = (parts) => `--color-${kebab(parts)}`;
 
-function buildThemeBlock(themeColors) {
+/**
+ * Walks the color tree for a theme and emits CSS variables grouped by
+ * top-level category (surface, text, accent, signal, border). Inserts a
+ * comment above each group naming the JSON path that backs it.
+ *
+ *   color.surface (light) — from design-system/tokens/colors.json
+ *   --color-surface-default: #FFFFFF;
+ *   --color-surface-raised:  #FFFFFF;
+ *   ...
+ */
+function buildThemeBlock(themeColors, themeLabel) {
   const lines = [];
+  let currentSection = null;
   for (const [path, value] of flatten(themeColors)) {
-    // focusRing is surfaced separately so the matching --shadow-focus
-    // stays adjacent to its color.
+    // focusRing is surfaced separately by buildFocusRingBlock so the matching
+    // --shadow-focus stays adjacent to its color.
     if (path[path.length - 1] === "focusRing") continue;
+    const section = path[0];
+    if (section !== currentSection) {
+      if (currentSection !== null) lines.push("");
+      lines.push(
+        `  /* color.${section} (${themeLabel}) — design-system/tokens/colors.json */`,
+      );
+      currentSection = section;
+    }
     const resolved = resolveRef(value, tokens);
     lines.push(`  ${semColorPath(path)}: ${resolved};`);
   }
@@ -78,74 +97,151 @@ function buildThemeBlock(themeColors) {
 }
 
 function buildRootBlock() {
-  const lines = [];
+  const sections = [];
 
-  // Space
-  for (const group of ["inset", "stack", "inline"]) {
-    for (const [k, v] of Object.entries(tokens.semantic.space[group])) {
-      lines.push(`  --space-${group}-${k}: ${resolveRef(v, tokens)};`);
-    }
-  }
-  // Radius
-  for (const [k, v] of Object.entries(tokens.semantic.radius)) {
-    lines.push(`  --radius-${k}: ${resolveRef(v, tokens)};`);
-  }
-  // Shadow
-  for (const [k, v] of Object.entries(tokens.primitive.shadow)) {
-    lines.push(`  --shadow-${k}: ${v};`);
-  }
-  // Motion
-  for (const [k, v] of Object.entries(tokens.primitive.motion.duration)) {
-    lines.push(`  --duration-${k}: ${v};`);
-  }
-  for (const [k, v] of Object.entries(tokens.primitive.motion.easing)) {
-    lines.push(`  --easing-${k}: ${v};`);
-  }
-  // Font
+  // Typography — design-system/tokens/typography.json (family only;
+  // size/weight/line-height/letter-spacing are consumed via Tailwind
+  // utilities backed by typography.json — see comments in tokens.css).
+  const familyLines = ["  /* font.family — design-system/tokens/typography.json */"];
   for (const [k, v] of Object.entries(tokens.primitive.font.family)) {
-    lines.push(`  --font-${k}: ${v};`);
+    familyLines.push(`  --font-${k}: ${v};`);
   }
-  // Container
+  sections.push(familyLines.join("\n"));
+
+  // Spacing — design-system/tokens/spacing.json
+  for (const group of ["inset", "stack", "inline"]) {
+    const spaceLines = [
+      `  /* space.${group} — design-system/tokens/spacing.json */`,
+    ];
+    for (const [k, v] of Object.entries(tokens.semantic.space[group])) {
+      spaceLines.push(`  --space-${group}-${k}: ${resolveRef(v, tokens)};`);
+    }
+    sections.push(spaceLines.join("\n"));
+  }
+
+  // Radius — design-system/tokens/radius.json
+  const radiusLines = ["  /* radius — design-system/tokens/radius.json */"];
+  for (const [k, v] of Object.entries(tokens.semantic.radius)) {
+    radiusLines.push(`  --radius-${k}: ${resolveRef(v, tokens)};`);
+  }
+  sections.push(radiusLines.join("\n"));
+
+  // Shadow (non-focus; focus is theme-tinted, lives in the theme block).
+  const shadowLines = ["  /* shadow — design-system/tokens/shadows.json */"];
+  for (const [k, v] of Object.entries(tokens.primitive.shadow)) {
+    if (k === "focus") continue;
+    shadowLines.push(`  --shadow-${k}: ${v};`);
+  }
+  sections.push(shadowLines.join("\n"));
+
+  // Motion — design-system/tokens/motion.json
+  const durLines = [
+    "  /* motion.duration — design-system/tokens/motion.json */",
+  ];
+  for (const [k, v] of Object.entries(tokens.primitive.motion.duration)) {
+    durLines.push(`  --duration-${k}: ${v};`);
+  }
+  sections.push(durLines.join("\n"));
+
+  const easingLines = [
+    "  /* motion.easing — design-system/tokens/motion.json */",
+  ];
+  for (const [k, v] of Object.entries(tokens.primitive.motion.easing)) {
+    easingLines.push(`  --easing-${k}: ${v};`);
+  }
+  sections.push(easingLines.join("\n"));
+
+  // Container widths — design-system/tokens/breakpoints.json (container.*)
+  const containerLines = [
+    "  /* container — design-system/tokens/breakpoints.json (container.*) */",
+  ];
   for (const [k, v] of Object.entries(tokens.semantic.container)) {
-    lines.push(`  --container-${k}: ${v};`);
+    containerLines.push(`  --container-${k}: ${v};`);
   }
-  return lines.join("\n");
+  sections.push(containerLines.join("\n"));
+
+  return sections.join("\n\n");
 }
 
-function buildFocusRingBlock(theme) {
+function buildFocusRingBlock(theme, themeLabel) {
   const ring = resolveRef(theme.color.focusRing, tokens);
-  // The translucent ring shadow uses the focus color at ~45% alpha. We keep
-  // the original primitive in tokens.primitive.shadow.focus for parity, but
-  // surface theme-specific overrides here.
   return [
+    `  /* color.focus.ring + shadow.focus (${themeLabel}) — design-system/tokens/{colors,shadows}.json */`,
     `  --color-focus-ring: ${ring};`,
     `  --shadow-focus: 0 0 0 3px color-mix(in srgb, ${ring} 45%, transparent);`,
   ].join("\n");
 }
 
 const css = `/*
- * Generated by scripts/generate-tokens.mjs. Do not edit by hand.
- * Source: packages/ui/src/tokens/tokens.json
+ * FAMM design tokens — CSS custom properties.
  *
- * Apply via <html data-theme="light|dark">. Imported once at the app root
- * (apps/web/src/app/layout.tsx → import "@famm/ui/tokens.css").
+ * Generated by scripts/generate-tokens.mjs. Do not hand-edit. Source:
+ *   - packages/ui/src/tokens/tokens.json     (code source of truth)
+ *   - design-system/tokens/*.json            (readable contract; per-token usage notes)
+ *
+ * Imported once at the app root via \`import "@famm/ui/tokens.css"\` in
+ * apps/web/src/app/layout.tsx.
+ *
+ * THEMING
+ *   Light is the default and lives at :root (also matched by
+ *   [data-theme="light"]). Dark mode rides on <html data-theme="dark">.
+ *   Future themes (high-contrast, studio-tenant) plug into the same
+ *   [data-theme="..."] mechanism — that is the "room" reserved for them.
+ *
+ * NAMING CONVENTION
+ *   JSON path (dot-separated)         CSS variable (kebab-cased)
+ *   color.text.primary                --color-text-primary
+ *   color.signal.pr                   --color-signal-pr
+ *   color.focus.ring                  --color-focus-ring
+ *   space.inset.md                    --space-inset-md
+ *   space.stack.lg                    --space-stack-lg
+ *   space.inline.sm                   --space-inline-sm
+ *   radius.control                    --radius-control
+ *   shadow.md                         --shadow-md
+ *   motion.duration.fast              --duration-fast
+ *   motion.easing.standard            --easing-standard
+ *   container.lg                      --container-lg
+ *
+ * Typography size / weight / line-height / letter-spacing tokens are
+ * documented in design-system/tokens/typography.json and surfaced through
+ * Tailwind utilities (text-base, font-medium, leading-normal,
+ * tracking-wide) — not as CSS custom properties — to avoid duplicating
+ * Tailwind's existing scale.
  */
 
 :root,
 [data-theme="light"] {
-${buildThemeBlock(tokens.semantic.light.color)}
-${buildFocusRingBlock(tokens.semantic.light)}
+${buildThemeBlock(tokens.semantic.light.color, "light")}
+
+${buildFocusRingBlock(tokens.semantic.light, "light")}
 }
 
+/*
+ * Dark theme. Values are wired now so the toggle can be enabled by flipping
+ * <html data-theme="dark">; the toggle UX (system detection, persistence,
+ * settings control) is the "later" part of dark-mode work.
+ */
 [data-theme="dark"] {
-${buildThemeBlock(tokens.semantic.dark.color)}
-${buildFocusRingBlock(tokens.semantic.dark)}
+${buildThemeBlock(tokens.semantic.dark.color, "dark")}
+
+${buildFocusRingBlock(tokens.semantic.dark, "dark")}
 }
 
+/*
+ * Theme-agnostic tokens. Spacing, radius, shadow (non-focus), motion,
+ * typography family, and container widths do not change between themes.
+ */
 :root {
 ${buildRootBlock()}
 }
 
+/*
+ * Reduced-motion override. Token durations collapse to 0ms for users with
+ * prefers-reduced-motion: reduce — any transition driven purely by
+ * --duration-* gets a reduced variant for free. Translation- or
+ * keyframe-based animations must still branch on useReducedMotion() —
+ * see design-system/motion.md.
+ */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-fast: 0ms;
