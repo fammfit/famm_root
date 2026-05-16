@@ -5,7 +5,7 @@
  */
 import { type NextRequest } from "next/server";
 import { getAuthContext, assertPermission } from "@/lib/rbac/access-control";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { apiSuccess, apiError, handleError, zodErrorsToDetails } from "@/lib/api-response";
 import { generateSlots } from "@/lib/scheduling/scheduling-service";
 import { z, ZodError } from "zod";
 
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return apiSuccess(result, 200);
   } catch (err) {
     if (err instanceof ZodError) {
-      return apiError("VALIDATION_ERROR", "Invalid request data", 400, err.flatten());
+      return apiError("VALIDATION_ERROR", "Invalid request data", 400, zodErrorsToDetails(err));
     }
     return handleError(err);
   }

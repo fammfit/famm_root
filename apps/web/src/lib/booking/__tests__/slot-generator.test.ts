@@ -139,7 +139,7 @@ describe("generateAvailableSlots", () => {
         startAt: new Date("2026-06-01T09:00:00Z"),
         endAt: new Date("2026-06-01T10:00:00Z"),
       },
-    ]);
+    ] as unknown as Awaited<ReturnType<typeof prisma.booking.findMany>>);
     vi.mocked(prisma.blockedPeriod.findMany).mockResolvedValue([]);
 
     const slots = await generateAvailableSlots({

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@famm/db";
 import { generateSecureToken, hashToken } from "./tokens";
 import type { UserRole } from "@famm/types";
 import { INVITE_TTL_DAYS } from "@famm/auth";
@@ -20,9 +21,7 @@ export interface InviteResult {
   expiresAt: Date;
 }
 
-export async function createInvite(
-  params: CreateInviteParams
-): Promise<InviteResult> {
+export async function createInvite(params: CreateInviteParams): Promise<InviteResult> {
   // Prevent privilege escalation — can only invite roles below your own
   if (!canAssignRole(params.invitedByRole, params.role)) {
     throw new Error("INSUFFICIENT_PERMISSION_FOR_ROLE");
@@ -61,9 +60,7 @@ export async function createInvite(
 
   const rawToken = generateSecureToken(32);
   const tokenHash = hashToken(rawToken);
-  const expiresAt = new Date(
-    Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
-  );
+  const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
 
   const invite = await prisma.inviteToken.create({
     data: {
@@ -73,7 +70,7 @@ export async function createInvite(
       tokenHash,
       invitedBy: params.invitedByUserId,
       message: params.message,
-      metadata: params.metadata ?? {},
+      metadata: (params.metadata ?? {}) as Prisma.InputJsonValue,
       expiresAt,
     },
   });
@@ -149,19 +146,13 @@ export async function acceptInvite({
   return { tenantId, role };
 }
 
-export async function revokeInvite(
-  inviteId: string,
-  revokedBy: string
-): Promise<void> {
+export async function revokeInvite(inviteId: string, revokedBy: string): Promise<void> {
   await prisma.inviteToken.update({
     where: { id: inviteId, acceptedAt: null, revokedAt: null },
     data: { revokedAt: new Date(), revokedBy },
   });
 }
 
-export function buildInviteUrl(
-  baseUrl: string,
-  token: string
-): string {
+export function buildInviteUrl(baseUrl: string, token: string): string {
   return `${baseUrl}/invite/${token}`;
 }

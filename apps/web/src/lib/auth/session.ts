@@ -33,9 +33,7 @@ export interface CreateSessionParams {
   extraPermissions?: string[];
 }
 
-export async function createSession(
-  params: CreateSessionParams
-): Promise<SessionData> {
+export async function createSession(params: CreateSessionParams): Promise<SessionData> {
   const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
 
   const dbSession = await prisma.session.create({
@@ -79,9 +77,7 @@ export async function createSession(
 
 // ── Read ───────────────────────────────────────────────────────────────────
 
-export async function getSession(
-  sessionId: string
-): Promise<SessionData | null> {
+export async function getSession(sessionId: string): Promise<SessionData | null> {
   // Fast path: Redis
   const cached = await redis.get(sessionKey(sessionId)).catch(() => null);
   if (cached) {
@@ -90,13 +86,11 @@ export async function getSession(
 
   // Slow path: DB (e.g., after Redis restart)
   const dbSession = await prisma.session.findUnique({
-    where: { id: sessionId, isRevoked: false },
+    where: { id: sessionId },
     include: {
       user: {
         include: {
-          memberships: {
-            where: { tenantId: { not: null } },
-          },
+          memberships: true,
         },
       },
     },
@@ -148,9 +142,7 @@ export async function touchSession(sessionId: string): Promise<void> {
         data: { lastActiveAt: new Date() },
       })
       .catch(() => null),
-    redis
-      .expire(sessionKey(sessionId), SESSION_TTL_SECONDS)
-      .catch(() => null),
+    redis.expire(sessionKey(sessionId), SESSION_TTL_SECONDS).catch(() => null),
   ]);
 }
 
@@ -204,10 +196,7 @@ export async function rotateRefreshToken(
 
 // ── Revoke ─────────────────────────────────────────────────────────────────
 
-export async function revokeSession(
-  sessionId: string,
-  reason = "explicit_logout"
-): Promise<void> {
+export async function revokeSession(sessionId: string, reason = "explicit_logout"): Promise<void> {
   await Promise.all([
     prisma.session.update({
       where: { id: sessionId },
@@ -225,9 +214,7 @@ export async function revokeAllUserSessions(
 ): Promise<number> {
   const sessionIds = await redis.smembers(userSessionsKey(userId));
 
-  const toRevoke = exceptSessionId
-    ? sessionIds.filter((id) => id !== exceptSessionId)
-    : sessionIds;
+  const toRevoke = exceptSessionId ? sessionIds.filter((id) => id !== exceptSessionId) : sessionIds;
 
   if (toRevoke.length === 0) return 0;
 
@@ -241,10 +228,7 @@ export async function revokeAllUserSessions(
       data: { isRevoked: true, revokedAt: new Date(), revokedReason: "revoke_all" },
     }),
     ...toRevoke.map((id) =>
-      Promise.all([
-        redis.del(sessionKey(id)),
-        redis.set(revokedKey(id), "1", "EX", 3600),
-      ])
+      Promise.all([redis.del(sessionKey(id)), redis.set(revokedKey(id), "1", "EX", 3600)])
     ),
     redis.del(userSessionsKey(userId)),
   ]);
@@ -252,10 +236,7 @@ export async function revokeAllUserSessions(
   return toRevoke.length;
 }
 
-export async function listUserSessions(
-  userId: string,
-  tenantId?: string
-): Promise<SessionData[]> {
+export async function listUserSessions(userId: string, tenantId?: string): Promise<SessionData[]> {
   const dbSessions = await prisma.session.findMany({
     where: {
       userId,

@@ -3,7 +3,7 @@ import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { timeout } from "hono/timeout";
-import { rateLimiter } from "hono/rate-limiter";
+import { rateLimiter } from "hono-rate-limiter";
 
 import healthRoutes from "./routes/health";
 import webhookRoutes from "./routes/webhooks";

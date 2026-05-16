@@ -3,7 +3,7 @@ import { getAuthContextChecked, assertPermission } from "@/lib/rbac/access-contr
 import { assertMembership } from "@/lib/tenant/query-helpers";
 import { canAssignRole } from "@famm/auth";
 import { writeAuditLog } from "@/lib/audit";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { apiSuccess, apiError, handleError, zodErrorsToDetails } from "@/lib/api-response";
 import { UpdateMemberRoleSchema } from "@famm/shared";
 import { prisma } from "@/lib/db";
 import { ZodError } from "zod";
@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       tenantId,
       userId: ctx.userId,
       action: "MEMBER_ROLE_UPDATE",
-      resourceType: "tenantMembership",
+      resource: "tenantMembership",
       resourceId: `${targetUserId}:${tenantId}`,
       metadata: { previousRole: membership.role, newRole },
       ipAddress: request.headers.get("x-forwarded-for") ?? undefined,
@@ -58,7 +58,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return apiSuccess({ membership: updated });
   } catch (err) {
     if (err instanceof ZodError) {
-      return apiError("VALIDATION_ERROR", "Invalid request data", 400, err.flatten());
+      return apiError("VALIDATION_ERROR", "Invalid request data", 400, zodErrorsToDetails(err));
     }
     return handleError(err);
   }
@@ -97,7 +97,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       tenantId,
       userId: ctx.userId,
       action: "MEMBER_REMOVE",
-      resourceType: "tenantMembership",
+      resource: "tenantMembership",
       resourceId: `${targetUserId}:${tenantId}`,
       metadata: { removedRole: membership.role, selfRemoval: ctx.userId === targetUserId },
       ipAddress: request.headers.get("x-forwarded-for") ?? undefined,

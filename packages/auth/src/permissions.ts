@@ -34,6 +34,7 @@ export type Permission =
   | "tenant:members:manage"
   | "tenant:suspend"
   | "tenant:create"
+  | "tenant:delete"
   // Services
   | "service:read"
   | "service:create"
@@ -186,6 +187,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "tenant:settings:update",
     "tenant:billing",
     "tenant:members:manage",
+    "tenant:delete",
     "service:read",
     "service:create",
     "service:update",
@@ -227,6 +229,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "tenant:members:manage",
     "tenant:suspend",
     "tenant:create",
+    "tenant:delete",
     "service:read",
     "service:create",
     "service:update",

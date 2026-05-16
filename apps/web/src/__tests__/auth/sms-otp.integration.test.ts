@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { sendSmsOtp, verifySmsOtp } from "@/lib/auth/sms-otp";
 import { prisma } from "@/lib/db";
 import { createTestTenant } from "../setup/factories";
@@ -11,7 +11,11 @@ describe("SMS OTP auth", () => {
     const tenant = await createTestTenant();
     tenantId = tenant.id;
     // Ensure non-production mode so Twilio isn't called and code is returned
-    process.env["NODE_ENV"] = "test";
+    vi.stubEnv("NODE_ENV", "test");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
   });
 
   it("creates an OTP record and returns the code in non-production mode", async () => {

@@ -4,7 +4,7 @@
  */
 import { type NextRequest } from "next/server";
 import { getAuthContext, assertPermission } from "@/lib/rbac/access-control";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { apiSuccess, apiError, handleError, zodErrorsToDetails } from "@/lib/api-response";
 import { prisma } from "@/lib/db";
 import { getActiveHoldCount } from "@/lib/scheduling/booking-hold";
 import { cancelSlot } from "@/lib/scheduling/scheduling-service";
@@ -32,7 +32,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           },
         },
         trainer: {
-          select: { id: true, user: { select: { firstName: true, lastName: true, avatarUrl: true } } },
+          select: {
+            id: true,
+            user: { select: { firstName: true, lastName: true, avatarUrl: true } },
+          },
         },
         location: { select: { id: true, name: true, address: true, isVirtual: true } },
         waitlist: {
@@ -82,7 +85,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return apiSuccess({ cancelled: true });
   } catch (err) {
     if (err instanceof ZodError) {
-      return apiError("VALIDATION_ERROR", "Invalid request data", 400, err.flatten());
+      return apiError("VALIDATION_ERROR", "Invalid request data", 400, zodErrorsToDetails(err));
     }
     return handleError(err);
   }
