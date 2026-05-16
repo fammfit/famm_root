@@ -7,6 +7,8 @@ const PUBLIC_PATHS = new Set([
   "/",
   "/login",
   "/register",
+  "/new-trainer-offer",
+  "/trainer",
   "/api/v1/auth/login",
   "/api/v1/auth/register",
   "/api/v1/auth/refresh",

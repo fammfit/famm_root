@@ -66,6 +66,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  async redirects() {
+    return [
+      {
+        // Short alias used in printed / QR-code contexts.
+        source: "/trainer",
+        destination: "/new-trainer-offer?from=short",
+        permanent: true, // 308
+      },
+    ];
+  },
 };
 
 export default nextConfig;

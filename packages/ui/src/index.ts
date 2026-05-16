@@ -37,6 +37,12 @@ export type { EmptyStateProps } from "./components/patterns/empty-state";
 export { ErrorState } from "./components/patterns/error-state";
 export type { ErrorStateProps } from "./components/patterns/error-state";
 
+export { Money } from "./components/patterns/money";
+export type { MoneyProps } from "./components/patterns/money";
+
+export { CountdownPill } from "./components/patterns/countdown-pill";
+export type { CountdownPillProps } from "./components/patterns/countdown-pill";
+
 // Hooks
 export { useReducedMotion } from "./hooks/use-reduced-motion";
 
