@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "../lib/utils";
+import { cn } from "../../lib/utils";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -16,7 +16,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-text-secondary"
           >
             {label}
           </label>
@@ -25,30 +25,39 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           type={type}
           className={cn(
-            "flex h-10 w-full rounded-md border bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors",
+            "flex h-10 w-full rounded-control border bg-surface px-inset-sm py-inset-xs text-sm text-text-primary placeholder:text-text-muted",
+            "transition-colors duration-fast ease-standard",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+            "disabled:cursor-not-allowed disabled:opacity-50",
             error
-              ? "border-red-500 text-red-900 focus-visible:ring-red-500"
-              : "border-gray-300 focus-visible:ring-brand-500",
-            className
+              ? "border-signal-danger focus-visible:ring-signal-danger"
+              : "border-border focus-visible:ring",
+            className,
           )}
           ref={ref}
           aria-invalid={error ? "true" : undefined}
-          aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+          aria-describedby={
+            error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined
+          }
           {...props}
         />
         {error && (
-          <p id={`${inputId}-error`} className="text-xs text-red-600" role="alert">
+          <p
+            id={`${inputId}-error`}
+            className="text-xs text-signal-danger"
+            role="alert"
+          >
             {error}
           </p>
         )}
         {!error && hint && (
-          <p id={`${inputId}-hint`} className="text-xs text-gray-500">
+          <p id={`${inputId}-hint`} className="text-xs text-text-muted">
             {hint}
           </p>
         )}
       </div>
     );
-  }
+  },
 );
 
 Input.displayName = "Input";

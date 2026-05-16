@@ -1,0 +1,62 @@
+name: Visual Regression
+
+# Visual regression tests for @famm/ui primitives and patterns.
+# Strategy: Playwright + pixelmatch (decided in docs/DESIGN_SYSTEM.md §8.2).
+#
+# Currently gated to manual dispatch because the stories surface that the
+# tests target doesn't exist yet. Enable the `pull_request` trigger once
+# packages/ui has a stories app (Ladle / Storybook / a minimal Next page)
+# that renders every primitive + pattern variant.
+#
+# When enabling, add:
+#   pull_request:
+#     paths:
+#       - "packages/ui/**"
+#       - ".github/workflows/visual-regression.yml"
+
+on:
+  workflow_dispatch:
+  # pull_request: enable once a stories surface exists.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vrt:
+    name: Playwright snapshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # TODO(@fammfit/design-system): build the stories surface.
+      # - name: Build stories
+      #   run: npm run -w @famm/ui stories:build
+      #
+      # - name: Run visual tests
+      #   run: npm run -w @famm/ui test:vrt
+      #
+      # - name: Upload diff artifacts on failure
+      #   if: failure()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: vrt-diffs
+      #     path: packages/ui/test-results/
+
+      - name: Placeholder
+        run: |
+          echo "Visual regression scaffolding is in place but disabled."
+          echo "Wire up a stories surface in packages/ui and enable the steps above."

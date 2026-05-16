@@ -1,6 +1,8 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { hashPassword, signAccessToken, signRefreshToken } from "@/lib/auth";
+import { hashPassword } from "@/lib/auth";
+import { newRefreshTokenPair, signAccessToken } from "@/lib/auth/tokens";
+import { createSession } from "@/lib/auth/session";
 import { apiSuccess, apiError, handleError } from "@/lib/api-response";
 import { RegisterSchema } from "@famm/shared";
 
@@ -33,11 +35,7 @@ export async function POST(request: NextRequest) {
         },
       });
       if (existingMembership) {
-        return apiError(
-          "CONFLICT",
-          "Email already registered in this tenant",
-          409
-        );
+        return apiError("CONFLICT", "Email already registered in this tenant", 409);
       }
     }
 
@@ -68,25 +66,25 @@ export async function POST(request: NextRequest) {
       return { user, membership };
     });
 
+    const { refreshToken, refreshTokenHash } = newRefreshTokenPair();
+
+    const session = await createSession({
+      userId: user.id,
+      tenantId: tenant.id,
+      email: user.email,
+      role: membership.role,
+      authMethod: "PASSWORD",
+      refreshTokenHash,
+      ipAddress: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
+      userAgent: request.headers.get("user-agent") ?? undefined,
+    });
+
     const accessToken = await signAccessToken({
       sub: user.id,
       email: user.email,
       tenantId: tenant.id,
       role: membership.role,
-    });
-
-    const refreshToken = await signRefreshToken();
-
-    await prisma.session.create({
-      data: {
-        userId: user.id,
-        token: accessToken,
-        refreshToken,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
-        ipAddress:
-          request.headers.get("x-forwarded-for") ?? request.ip ?? null,
-        userAgent: request.headers.get("user-agent") ?? undefined,
-      },
+      sid: session.sessionId,
     });
 
     return apiSuccess(

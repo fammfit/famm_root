@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import type { AccessTokenPayload } from "@famm/auth";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env["JWT_SECRET"] ?? "dev-secret-change-in-production"
-);
+import { getJwtSecret, JWT_ISSUER, JWT_AUDIENCE_WEB } from "@famm/auth";
 
 const PUBLIC_PATHS = new Set([
   "/",
@@ -30,10 +27,7 @@ function isPublicPath(pathname: string): boolean {
 }
 
 function getRequestId(request: NextRequest): string {
-  return (
-    request.headers.get("x-request-id") ??
-    crypto.randomUUID()
-  );
+  return request.headers.get("x-request-id") ?? crypto.randomUUID();
 }
 
 export async function middleware(request: NextRequest) {
@@ -64,11 +58,16 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret(), {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE_WEB,
+    });
     const claims = payload as unknown as AccessTokenPayload;
 
-    // Check revocation via Redis is done in the route handler for hot paths.
-    // The middleware only does JWT signature + expiry — O(1) edge check.
+    // Note: revocation is checked in the route layer (getRequestContext /
+    // getAuthContext) because Next.js 14 middleware runs in the Edge runtime
+    // where the Node-only Redis client is unavailable. Access tokens have a
+    // short TTL (15m) so missing the edge check has bounded impact.
 
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-user-id", claims.sub);

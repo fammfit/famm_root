@@ -11,6 +11,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@famm/db": "*",
     "@famm/types": "*",
     "stripe": "^16.1.0",
     "zod": "^3.23.0"
