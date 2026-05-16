@@ -3,22 +3,34 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-control text-sm font-medium transition-colors duration-fast ease-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:pointer-events-none disabled:opacity-50",
+  // Base — transitions cover colors, shadow, and transform so hover /
+  // active feel cohesive. The transform is gated on `motion-safe:` so
+  // it collapses to no movement under `prefers-reduced-motion: reduce`
+  // (the transition itself remains, so color/shadow still cross-fade).
+  // Disabled buttons can't fire :hover because of pointer-events-none,
+  // so the lift naturally suppresses there too.
+  "inline-flex items-center justify-center rounded-control text-sm font-medium " +
+    "transition duration-base ease-standard " +
+    "motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface " +
+    "disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "bg-accent text-onAccent hover:bg-accent-hover focus-visible:ring",
+          "bg-accent text-onAccent hover:bg-accent-hover hover:shadow-sm focus-visible:ring",
         destructive:
-          "bg-signal-danger text-onAccent hover:opacity-90 focus-visible:ring-signal-danger",
+          "bg-signal-danger text-onAccent hover:opacity-90 hover:shadow-sm focus-visible:ring-signal-danger",
         outline:
-          "border border-border bg-surface text-text-primary hover:bg-surface-sunken focus-visible:ring",
+          "border border-border bg-surface text-text-primary hover:bg-surface-sunken hover:shadow-sm focus-visible:ring",
         ghost:
           "text-text-secondary hover:bg-surface-sunken hover:text-text-primary",
+        // Link is text-shaped; suppress the lift via tailwind-merge
+        // (this `translate-y-0` overrides the base `-translate-y-px`).
         link:
-          "text-accent underline-offset-4 hover:underline focus-visible:ring",
+          "text-accent underline-offset-4 hover:underline motion-safe:hover:translate-y-0 focus-visible:ring",
         secondary:
-          "bg-surface-sunken text-text-primary hover:bg-accent-subtle focus-visible:ring",
+          "bg-surface-sunken text-text-primary hover:bg-accent-subtle hover:shadow-sm focus-visible:ring",
       },
       size: {
         sm: "h-8 px-inset-sm text-xs",

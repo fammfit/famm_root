@@ -5,18 +5,34 @@ import { cn } from "../../lib/utils";
 const cardVariants = cva(
   // Base: raised surface, hairline border, soft shadow, card radius.
   // The focus-within ring is the only visible cue that a control inside
-  // an unbordered card has focus on touch viewports (card.md §5).
-  "rounded-card border border-border-subtle bg-surface-raised shadow-sm transition-shadow duration-fast ease-standard focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-surface focus-within:ring",
+  // an unbordered card has focus on touch viewports (card.md §5). The
+  // base transitions cover the focus-within ring fade — they do NOT
+  // animate any hover effect on the default variant (per the spec:
+  // "non-interactive cards don't animate").
+  "rounded-card border border-border-subtle bg-surface-raised shadow-sm " +
+    "transition-shadow duration-fast ease-standard " +
+    "focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-surface focus-within:ring",
   {
     variants: {
       variant: {
         default: "",
-        // Whole-card hover lift for surfaces that are themselves the
-        // action target (a Card wrapping a Link). The card.md §2 spec
-        // notes this variant; consumers still wrap content in a Link
-        // or Button — Card does not become a <button> itself.
+        // The interactive variant is for cards whose entire surface is
+        // a single action target (a Card wrapping a Link). The card
+        // itself never becomes a <button>; the semantics come from the
+        // child Link/Button. Hover lift is gated on `motion-safe:` so
+        // it collapses to no movement under
+        // `prefers-reduced-motion: reduce`. The transition itself
+        // remains so shadow / border cross-fade smoothly. `active`
+        // returns the card to the resting position to give a tactile
+        // press feedback. `focus-visible` is a backup keyboard cue for
+        // consumers that make the card itself focusable (tabIndex);
+        // when the card wraps a Link, the focus lands on the Link and
+        // `focus-within` on the base catches it.
         interactive:
-          "cursor-pointer hover:shadow-md hover:border-border-default",
+          "cursor-pointer transition duration-base ease-standard " +
+          "hover:shadow-md hover:border-border-default " +
+          "motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 " +
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface focus-visible:ring",
       },
     },
     defaultVariants: { variant: "default" },
