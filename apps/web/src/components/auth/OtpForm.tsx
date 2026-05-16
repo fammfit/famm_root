@@ -10,13 +10,19 @@ interface OtpFormProps {
   phone: string;
   /** Tenant slug. Required for verify. */
   tenantSlug: string;
-  /** Where to navigate after a successful verify. Defaults to `/`. */
+  /** Where to navigate after a successful verify. Defaults to `/`. Ignored when `onSuccess` is supplied. */
   next?: string;
+  /**
+   * Called after the OTP verifies successfully. When supplied, the form
+   * does not navigate — the parent decides what to do (e.g. close a
+   * verify Sheet without leaving the page).
+   */
+  onSuccess?: () => void;
 }
 
 const RESEND_COOLDOWN_SEC = 30;
 
-export function OtpForm({ phone, tenantSlug, next = "/" }: OtpFormProps) {
+export function OtpForm({ phone, tenantSlug, next = "/", onSuccess }: OtpFormProps) {
   const router = useRouter();
   const [code, setCode] = React.useState("");
   const [status, setStatus] = React.useState<"idle" | "submitting">("idle");
@@ -41,6 +47,10 @@ export function OtpForm({ phone, tenantSlug, next = "/" }: OtpFormProps) {
     try {
       await verifySmsOtp({ phone, code, tenantSlug });
       // Cookies set server-side; Next router will see them on next nav.
+      if (onSuccess) {
+        onSuccess();
+        return;
+      }
       router.push(next);
       router.refresh();
     } catch (err) {
