@@ -4,9 +4,8 @@
  */
 import { type NextRequest } from "next/server";
 import { getAuthContext } from "@/lib/rbac/access-control";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { apiSuccess, apiError, handleError, zodErrorsToDetails } from "@/lib/api-response";
 import { prisma } from "@/lib/db";
-import { generateSlots } from "@/lib/scheduling/scheduling-service";
 import { getActiveHoldCount } from "@/lib/scheduling/booking-hold";
 import { z, ZodError } from "zod";
 import type { SlotStatus } from "@famm/db";
@@ -17,7 +16,9 @@ const QuerySchema = z.object({
   serviceId: z.string().optional(),
   from: z.string().datetime({ message: "from must be ISO 8601" }),
   to: z.string().datetime({ message: "to must be ISO 8601" }),
-  status: z.enum(["AVAILABLE", "PARTIALLY_BOOKED", "FULLY_BOOKED", "CANCELLED", "BLACKOUT"]).optional(),
+  status: z
+    .enum(["AVAILABLE", "PARTIALLY_BOOKED", "FULLY_BOOKED", "CANCELLED", "BLACKOUT"])
+    .optional(),
   timezone: z.string().default("UTC"),
   includeHoldCount: z.coerce.boolean().default(false),
 });
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return apiSuccess({ slots: enriched, total: enriched.length });
   } catch (err) {
     if (err instanceof ZodError) {
-      return apiError("VALIDATION_ERROR", "Invalid query parameters", 400, err.flatten());
+      return apiError("VALIDATION_ERROR", "Invalid query parameters", 400, zodErrorsToDetails(err));
     }
     return handleError(err);
   }

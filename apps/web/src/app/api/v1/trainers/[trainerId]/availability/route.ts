@@ -5,7 +5,7 @@
  */
 import { type NextRequest } from "next/server";
 import { getAuthContext, assertPermission } from "@/lib/rbac/access-control";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { apiSuccess, apiError, handleError, zodErrorsToDetails } from "@/lib/api-response";
 import { prisma } from "@/lib/db";
 import { z, ZodError } from "zod";
 import type { DayOfWeek } from "@famm/db";
@@ -13,9 +13,7 @@ import type { DayOfWeek } from "@famm/db";
 type RouteParams = { params: Promise<{ trainerId: string }> };
 
 const AvailabilityRuleSchema = z.object({
-  dayOfWeek: z.enum([
-    "MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY",
-  ]),
+  dayOfWeek: z.enum(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "startTime must be HH:MM"),
   endTime: z.string().regex(/^\d{2}:\d{2}$/, "endTime must be HH:MM"),
   timezone: z.string().min(1),
@@ -105,7 +103,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return apiSuccess({ rules: created }, 201);
   } catch (err) {
     if (err instanceof ZodError) {
-      return apiError("VALIDATION_ERROR", "Invalid request data", 400, err.flatten());
+      return apiError("VALIDATION_ERROR", "Invalid request data", 400, zodErrorsToDetails(err));
     }
     return handleError(err);
   }

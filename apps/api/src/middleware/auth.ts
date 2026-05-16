@@ -23,6 +23,7 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
     });
     c.set("user", payload as unknown as JwtPayload);
     await next();
+    return;
   } catch {
     return c.json(
       { success: false, error: { code: "TOKEN_EXPIRED", message: "Invalid or expired token" } },

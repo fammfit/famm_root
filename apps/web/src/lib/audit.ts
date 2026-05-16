@@ -1,3 +1,4 @@
+import { Prisma } from "@famm/db";
 import { prisma } from "./db";
 
 export interface AuditParams {
@@ -28,7 +29,7 @@ export function writeAuditLog(params: AuditParams): void {
         resourceId: params.resourceId,
         before: params.before ? (params.before as object) : undefined,
         after: params.after ? (params.after as object) : undefined,
-        metadata: params.metadata ?? {},
+        metadata: (params.metadata ?? {}) as Prisma.InputJsonValue,
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
         requestId: params.requestId,
@@ -40,9 +41,7 @@ export function writeAuditLog(params: AuditParams): void {
 }
 
 // Awaitable version for cases where you need confirmation
-export async function writeAuditLogAsync(
-  params: AuditParams
-): Promise<void> {
+export async function writeAuditLogAsync(params: AuditParams): Promise<void> {
   await prisma.auditLog.create({
     data: {
       tenantId: params.tenantId,
@@ -53,7 +52,7 @@ export async function writeAuditLogAsync(
       resourceId: params.resourceId,
       before: params.before ? (params.before as object) : undefined,
       after: params.after ? (params.after as object) : undefined,
-      metadata: params.metadata ?? {},
+      metadata: (params.metadata ?? {}) as Prisma.InputJsonValue,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
       requestId: params.requestId,

@@ -29,12 +29,10 @@ export interface ConflictResult {
 /**
  * Full conflict check combining DB bookings and Redis holds.
  */
-export async function checkConflict(
-  params: ConflictCheckParams
-): Promise<ConflictResult> {
+export async function checkConflict(params: ConflictCheckParams): Promise<ConflictResult> {
   const [dbConflicts, holdCount] = await Promise.all([
     getConflictingBookings(params),
-    getActiveHoldCount(params.trainerId, params.proposedStart, params.proposedEnd),
+    getActiveHoldCountForRange(params.trainerId, params.proposedStart, params.proposedEnd),
   ]);
 
   return {
@@ -66,7 +64,7 @@ export async function getConflictingBookings(
 /**
  * Count active (non-expired) Redis holds for a trainer in the given time window.
  */
-export async function getActiveHoldCount(
+export async function getActiveHoldCountForRange(
   trainerId: string,
   proposedStart: Date,
   proposedEnd: Date
@@ -124,10 +122,7 @@ export async function getConcurrentBookingCount(
 /**
  * Verify a slot has available capacity (DB bookedCount + live hold count < capacity).
  */
-export async function hasAvailableCapacity(
-  slotId: string,
-  additionalHolds = 0
-): Promise<boolean> {
+export async function hasAvailableCapacity(slotId: string, additionalHolds = 0): Promise<boolean> {
   const slot = await prisma.generatedSlot.findUnique({
     where: { id: slotId },
     select: { capacity: true, bookedCount: true },

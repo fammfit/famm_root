@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { AppError } from "@famm/shared";
 import { ZodError } from "zod";
 
+export function zodErrorsToDetails(err: ZodError): Array<{ field: string; message: string }> {
+  return err.errors.map((e) => ({
+    field: e.path.join("."),
+    message: e.message,
+  }));
+}
+
 export function apiSuccess<T>(data: T, status = 200): NextResponse {
   return NextResponse.json(
     {

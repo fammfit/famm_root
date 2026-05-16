@@ -4,6 +4,6 @@ module.exports = {
   extends: [
     // Design-system rules (no raw hex/px/inline-style outside L1 primitives).
     // See docs/DESIGN_SYSTEM.md §7.
-    "@famm/config/eslint/design-system",
+    require.resolve("@famm/config/eslint/design-system"),
   ],
 };

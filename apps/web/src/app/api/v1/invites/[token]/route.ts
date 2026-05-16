@@ -4,7 +4,7 @@ import { createSession } from "@/lib/auth/session";
 import { issueTokenBundle } from "@/lib/auth/tokens";
 import { secureCookieFlag } from "@/lib/auth/cookies";
 import { writeAuditLog } from "@/lib/audit";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { apiSuccess, apiError, handleError, zodErrorsToDetails } from "@/lib/api-response";
 import { AcceptInviteSchema } from "@famm/shared";
 import { prisma } from "@/lib/db";
 import { ZodError } from "zod";
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       tenantId,
       userId: user.id,
       action: "INVITE_ACCEPT",
-      resourceType: "invite",
+      resource: "invite",
       resourceId: invite.id,
       ipAddress,
       userAgent,
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return response;
   } catch (err) {
     if (err instanceof ZodError) {
-      return apiError("VALIDATION_ERROR", "Invalid request data", 400, err.flatten());
+      return apiError("VALIDATION_ERROR", "Invalid request data", 400, zodErrorsToDetails(err));
     }
     return handleError(err);
   }

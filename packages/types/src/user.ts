@@ -7,11 +7,9 @@ export type UserRole =
   | "STAFF"
   | "CLIENT";
 
-export type UserStatus =
-  | "ACTIVE"
-  | "INACTIVE"
-  | "PENDING_VERIFICATION"
-  | "SUSPENDED";
+export type UserStatus = "ACTIVE" | "INACTIVE" | "PENDING_VERIFICATION" | "SUSPENDED";
+
+export type AuthMethod = "PASSWORD" | "MAGIC_LINK" | "SMS_OTP" | "OAUTH";
 
 export interface User {
   id: string;

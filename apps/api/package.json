@@ -20,6 +20,7 @@
     "@famm/events": "*",
     "@famm/payments": "*",
     "hono": "^4.4.7",
+    "hono-rate-limiter": "^0.4.2",
     "@hono/node-server": "^1.11.4",
     "ioredis": "^5.3.2",
     "jose": "^5.3.0",

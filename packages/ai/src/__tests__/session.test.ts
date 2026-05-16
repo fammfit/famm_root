@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { Redis } from "ioredis-mock";
+import Redis from "ioredis-mock";
 import {
   appendTurn,
   loadOrCreate,

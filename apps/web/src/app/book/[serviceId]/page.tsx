@@ -11,10 +11,7 @@ interface PageProps {
 
 export const dynamic = "force-dynamic";
 
-export default async function BookServicePage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function BookServicePage({ params, searchParams }: PageProps) {
   let ctx;
   try {
     ctx = getRequestContext();
@@ -38,7 +35,10 @@ export default async function BookServicePage({
   let trainer = null;
   if (searchParams?.trainerId) {
     const t = await prisma.trainerProfile.findFirst({
-      where: { id: searchParams.trainerId, tenantId: ctx.tenantId },
+      where: {
+        id: searchParams.trainerId,
+        user: { memberships: { some: { tenantId: ctx.tenantId } } },
+      },
       include: { user: { select: { firstName: true, lastName: true } } },
     });
     if (t) {

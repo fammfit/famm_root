@@ -4,7 +4,7 @@
  */
 import { type NextRequest } from "next/server";
 import { getAuthContext, assertPermission } from "@/lib/rbac/access-control";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { apiSuccess, apiError, handleError, zodErrorsToDetails } from "@/lib/api-response";
 import { prisma } from "@/lib/db";
 import { applyBlackout } from "@/lib/scheduling/scheduling-service";
 import { z, ZodError } from "zod";
@@ -41,10 +41,7 @@ export async function GET(request: NextRequest) {
         ...(trainerId ? { trainerId } : {}),
         ...(from && to
           ? {
-              OR: [
-                { startAt: { gte: new Date(from), lt: new Date(to) } },
-                { isRecurring: true },
-              ],
+              OR: [{ startAt: { gte: new Date(from), lt: new Date(to) } }, { isRecurring: true }],
             }
           : {}),
       },
@@ -94,18 +91,13 @@ export async function POST(request: NextRequest) {
     // Retroactively blackout existing AVAILABLE generated slots
     let blackedOutCount = 0;
     if (data.blackoutExistingSlots && !data.isRecurring) {
-      blackedOutCount = await applyBlackout(
-        ctx.tenantId,
-        data.trainerId ?? null,
-        startAt,
-        endAt
-      );
+      blackedOutCount = await applyBlackout(ctx.tenantId, data.trainerId ?? null, startAt, endAt);
     }
 
     return apiSuccess({ period, blackedOutSlots: blackedOutCount }, 201);
   } catch (err) {
     if (err instanceof ZodError) {
-      return apiError("VALIDATION_ERROR", "Invalid request data", 400, err.flatten());
+      return apiError("VALIDATION_ERROR", "Invalid request data", 400, zodErrorsToDetails(err));
     }
     return handleError(err);
   }
