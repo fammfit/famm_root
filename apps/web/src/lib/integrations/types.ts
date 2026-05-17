@@ -93,3 +93,46 @@ export type ConnectCalendarStepData =
       provider: "skipped";
       skippedAt: string;
     };
+
+// ── Stripe (Payments) ──────────────────────────────────────────────────
+
+export type StripeAccountState = "active" | "restricted" | "pending" | "disabled";
+export type RequirementUrgency = "currently_due" | "eventually_due" | "past_due";
+
+export interface StripeAccountRequirement {
+  /** Stripe's field path: e.g. "individual.verification.document". */
+  field: string;
+  /** Human-readable label resolved client-side from a small map. */
+  label: string;
+  urgency: RequirementUrgency;
+}
+
+export interface StripeAccountStatus {
+  accountId: string;
+  email: string;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  status: StripeAccountState;
+  disabledReason: string | null;
+  requirements: ReadonlyArray<StripeAccountRequirement>;
+  externalAccountLast4: string | null;
+  payoutSchedule: {
+    interval: "daily" | "weekly" | "monthly" | "manual";
+    delayDays: number;
+  } | null;
+  defaultCurrency: string;
+}
+
+export type ConnectPaymentsStepData =
+  | {
+      provider: "stripe";
+      accountId: string;
+      chargesEnabled: boolean;
+      payoutsEnabled: boolean;
+      connectedAt: string;
+    }
+  | {
+      provider: "skipped";
+      skippedAt: string;
+    };
