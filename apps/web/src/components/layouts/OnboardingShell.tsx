@@ -113,16 +113,23 @@ function OnboardingShellInner({ initialProgress, canRestart, children }: Onboard
       const updated = await markComplete(currentSlug);
       trackEvent({ name: "onboarding.step.completed", payload: { slug: currentSlug } });
 
+      // Advance through the linear flow first. `completedAt` becomes set as
+      // soon as all *required* steps are done (i.e. after step 4 here),
+      // but the remaining optional steps still need a turn — only finalize
+      // and redirect once we've actually walked off the end of the list.
+      const after = nextStep(currentSlug);
+      if (after) {
+        router.push(stepHref(after));
+        return;
+      }
       if (updated.completedAt) {
-        // Flow is done.
         const done = await complete();
         trackEvent({ name: "onboarding.completed" });
         router.push(done.redirectTo);
         router.refresh();
         return;
       }
-      const after = nextStep(currentSlug);
-      router.push(after ? stepHref(after) : "/dashboard");
+      router.push("/dashboard");
     } catch {
       // Errors surface inline in the step body or via API toast; nothing
       // to do at the shell level beyond stopping the spinner.
@@ -135,10 +142,21 @@ function OnboardingShellInner({ initialProgress, canRestart, children }: Onboard
     if (step.required) return;
     setContinueLoading(true);
     try {
-      await markSkipped(currentSlug);
+      const updated = await markSkipped(currentSlug);
       trackEvent({ name: "onboarding.step.skipped", payload: { slug: currentSlug } });
       const after = nextStep(currentSlug);
-      router.push(after ? stepHref(after) : "/dashboard");
+      if (after) {
+        router.push(stepHref(after));
+        return;
+      }
+      if (updated.completedAt) {
+        const done = await complete();
+        trackEvent({ name: "onboarding.completed" });
+        router.push(done.redirectTo);
+        router.refresh();
+        return;
+      }
+      router.push("/dashboard");
     } finally {
       setContinueLoading(false);
     }
