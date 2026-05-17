@@ -27,22 +27,17 @@ interface AccordionContextValue {
   getPanelId: (value: string) => string | undefined;
 }
 
-const AccordionContext = React.createContext<AccordionContextValue | null>(
-  null,
-);
+const AccordionContext = React.createContext<AccordionContextValue | null>(null);
 
 function useAccordion(): AccordionContextValue {
   const ctx = React.useContext(AccordionContext);
   if (!ctx) {
-    throw new Error(
-      "Accordion sub-components must be rendered inside <Accordion>.",
-    );
+    throw new Error("Accordion sub-components must be rendered inside <Accordion>.");
   }
   return ctx;
 }
 
-export interface AccordionProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+export interface AccordionProps extends React.HTMLAttributes<HTMLDivElement> {
   type?: AccordionType;
   defaultValue?: string | string[];
   value?: string | string[];
@@ -50,30 +45,16 @@ export interface AccordionProps
 }
 
 const AccordionRoot = React.forwardRef<HTMLDivElement, AccordionProps>(
-  (
-    {
-      type = "single",
-      defaultValue,
-      value,
-      onValueChange,
-      className,
-      children,
-      ...props
-    },
-    ref,
-  ) => {
+  ({ type = "single", defaultValue, value, onValueChange, className, children, ...props }, ref) => {
     const isControlled = value !== undefined;
 
-    const normalize = React.useCallback(
-      (v: string | string[] | undefined): Set<string> => {
-        if (!v) return new Set();
-        return new Set(Array.isArray(v) ? v : [v]);
-      },
-      [],
-    );
+    const normalize = React.useCallback((v: string | string[] | undefined): Set<string> => {
+      if (!v) return new Set();
+      return new Set(Array.isArray(v) ? v : [v]);
+    }, []);
 
     const [uncontrolled, setUncontrolled] = React.useState<Set<string>>(() =>
-      normalize(defaultValue),
+      normalize(defaultValue)
     );
 
     const openValues = isControlled ? normalize(value) : uncontrolled;
@@ -87,7 +68,7 @@ const AccordionRoot = React.forwardRef<HTMLDivElement, AccordionProps>(
           onValueChange?.(Array.from(next));
         }
       },
-      [onValueChange, type],
+      [onValueChange, type]
     );
 
     const toggle = React.useCallback(
@@ -102,7 +83,7 @@ const AccordionRoot = React.forwardRef<HTMLDivElement, AccordionProps>(
         if (!isControlled) setUncontrolled(next);
         emit(next);
       },
-      [openValues, type, isControlled, emit],
+      [openValues, type, isControlled, emit]
     );
 
     // ID registries so triggers and panels can cross-reference each
@@ -124,21 +105,17 @@ const AccordionRoot = React.forwardRef<HTMLDivElement, AccordionProps>(
         getTriggerId: (v) => triggerIds.current.get(v),
         getPanelId: (v) => panelIds.current.get(v),
       }),
-      [type, openValues, toggle],
+      [type, openValues, toggle]
     );
 
     return (
       <AccordionContext.Provider value={ctx}>
-        <div
-          ref={ref}
-          className={cn("flex flex-col gap-stack-xs", className)}
-          {...props}
-        >
+        <div ref={ref} className={cn("flex flex-col gap-stack-xs", className)} {...props}>
           {children}
         </div>
       </AccordionContext.Provider>
     );
-  },
+  }
 );
 AccordionRoot.displayName = "Accordion";
 
@@ -147,15 +124,12 @@ const ItemContext = React.createContext<{ value: string } | null>(null);
 function useItem() {
   const ctx = React.useContext(ItemContext);
   if (!ctx) {
-    throw new Error(
-      "Accordion.Trigger and Accordion.Panel must be inside an Accordion.Item.",
-    );
+    throw new Error("Accordion.Trigger and Accordion.Panel must be inside an Accordion.Item.");
   }
   return ctx;
 }
 
-export interface AccordionItemProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+export interface AccordionItemProps extends React.HTMLAttributes<HTMLDivElement> {
   value: string;
 }
 
@@ -170,36 +144,25 @@ const AccordionItem = React.forwardRef<HTMLDivElement, AccordionItemProps>(
         <div
           ref={ref}
           data-state={isOpen ? "open" : "closed"}
-          className={cn(
-            "rounded-card border border-border-subtle bg-surface-raised",
-            className,
-          )}
+          className={cn("rounded-card border border-border-subtle bg-surface-raised", className)}
           {...props}
         >
           {children}
         </div>
       </ItemContext.Provider>
     );
-  },
+  }
 );
 AccordionItem.displayName = "Accordion.Item";
 
-export interface AccordionTriggerProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface AccordionTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /** Heading level the trigger should be wrapped in. Default 3. */
   headingLevel?: 2 | 3 | 4 | 5;
 }
 
-const AccordionTrigger = React.forwardRef<
-  HTMLButtonElement,
-  AccordionTriggerProps
->(
-  (
-    { className, children, headingLevel = 3, onClick, ...props },
-    ref,
-  ) => {
-    const { openValues, toggle, registerTriggerId, getPanelId } =
-      useAccordion();
+const AccordionTrigger = React.forwardRef<HTMLButtonElement, AccordionTriggerProps>(
+  ({ className, children, headingLevel = 3, onClick, ...props }, ref) => {
+    const { openValues, toggle, registerTriggerId, getPanelId } = useAccordion();
     const { value } = useItem();
     const isOpen = openValues.has(value);
     const reactId = React.useId();
@@ -230,7 +193,7 @@ const AccordionTrigger = React.forwardRef<
             "hover:bg-surface-sunken",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface focus-visible:ring",
             "disabled:opacity-50 disabled:pointer-events-none",
-            className,
+            className
           )}
           {...props}
         >
@@ -253,12 +216,11 @@ const AccordionTrigger = React.forwardRef<
         </button>
       </HeadingTag>
     );
-  },
+  }
 );
 AccordionTrigger.displayName = "Accordion.Trigger";
 
-export interface AccordionPanelProps
-  extends React.HTMLAttributes<HTMLDivElement> {}
+export interface AccordionPanelProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 const AccordionPanel = React.forwardRef<HTMLDivElement, AccordionPanelProps>(
   ({ className, children, ...props }, ref) => {
@@ -284,16 +246,13 @@ const AccordionPanel = React.forwardRef<HTMLDivElement, AccordionPanelProps>(
         // transition is removed; `hidden` still flips instantly.
         hidden={!isOpen}
         data-state={isOpen ? "open" : "closed"}
-        className={cn(
-          "accordion-panel px-inset-md text-sm text-text-secondary",
-          className,
-        )}
+        className={cn("accordion-panel px-inset-md text-sm text-text-secondary", className)}
         {...props}
       >
         {children}
       </div>
     );
-  },
+  }
 );
 AccordionPanel.displayName = "Accordion.Panel";
 

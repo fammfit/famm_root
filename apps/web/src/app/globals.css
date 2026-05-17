@@ -70,10 +70,18 @@
   html.is-mounted .section-enter {
     animation: sectionEnter 480ms cubic-bezier(0.2, 0, 0, 1) both;
   }
-  html.is-mounted .section-enter[data-stagger="1"] { animation-delay: 60ms;  }
-  html.is-mounted .section-enter[data-stagger="2"] { animation-delay: 120ms; }
-  html.is-mounted .section-enter[data-stagger="3"] { animation-delay: 180ms; }
-  html.is-mounted .section-enter[data-stagger="4"] { animation-delay: 240ms; }
+  html.is-mounted .section-enter[data-stagger="1"] {
+    animation-delay: 60ms;
+  }
+  html.is-mounted .section-enter[data-stagger="2"] {
+    animation-delay: 120ms;
+  }
+  html.is-mounted .section-enter[data-stagger="3"] {
+    animation-delay: 180ms;
+  }
+  html.is-mounted .section-enter[data-stagger="4"] {
+    animation-delay: 240ms;
+  }
 
   @media (prefers-reduced-motion: reduce) {
     html.is-mounted .section-enter,

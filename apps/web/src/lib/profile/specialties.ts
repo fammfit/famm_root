@@ -1,0 +1,51 @@
+export const COMMON_SPECIALTIES: ReadonlyArray<string> = [
+  "Strength training",
+  "Hypertrophy",
+  "Powerlifting",
+  "Olympic lifting",
+  "Functional",
+  "Mobility",
+  "Endurance",
+  "HIIT",
+  "Boxing",
+  "Pilates",
+  "Yoga",
+  "Pre/post-natal",
+  "Rehab / injury recovery",
+  "Weight loss",
+  "Nutrition coaching",
+  "Sports-specific",
+];
+
+/**
+ * Reserved slug words. These cannot be used as a public booking slug
+ * because they collide with route prefixes or have brand-safety risk.
+ */
+export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
+  "admin",
+  "api",
+  "app",
+  "assets",
+  "auth",
+  "book",
+  "client",
+  "clients",
+  "dashboard",
+  "famm",
+  "help",
+  "legal",
+  "login",
+  "logout",
+  "my",
+  "new-trainer-offer",
+  "register",
+  "settings",
+  "signup",
+  "static",
+  "support",
+  "t",
+  "trainer",
+  "trainers",
+  "verify",
+  "www",
+]);

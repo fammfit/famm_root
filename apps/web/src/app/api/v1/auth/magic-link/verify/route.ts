@@ -3,8 +3,8 @@ import { prisma } from "@/lib/db";
 import { verifyMagicLink } from "@/lib/auth/magic-link";
 import { createSession } from "@/lib/auth/session";
 import { newRefreshTokenPair, signAccessToken } from "@/lib/auth/tokens";
-import { secureCookieFlag } from "@/lib/auth/cookies";
-import { apiSuccess, apiError, handleError } from "@/lib/api-response";
+import { attachSessionCookies, jsonWithSessionCookies } from "@/lib/auth/session-cookies";
+import { apiError, handleError } from "@/lib/api-response";
 import { writeAuditLog } from "@/lib/audit";
 import { MagicLinkVerifySchema } from "@famm/shared";
 
@@ -87,14 +87,28 @@ export async function GET(request: NextRequest) {
       ipAddress: request.headers.get("x-forwarded-for") ?? request.ip ?? undefined,
     });
 
-    // If the request is an API call, return JSON; otherwise redirect with cookie
+    // If the request is an API call (the /auth/magic-link landing page does
+    // this), return JSON with cookies attached so the SPA can immediately
+    // navigate. Otherwise the email link arrived in a fresh browser tab —
+    // set cookies and redirect to / (role-aware redirect routes from there).
     const acceptsJson = request.headers.get("accept")?.includes("application/json");
     if (acceptsJson) {
-      return apiSuccess({
-        accessToken: finalToken,
-        refreshToken,
-        user: { id: user.id, email: user.email, role: membership.role, tenantId: tenant.id },
-      });
+      return jsonWithSessionCookies(
+        {
+          success: true,
+          data: {
+            accessToken: finalToken,
+            user: {
+              id: user.id,
+              email: user.email,
+              role: membership.role,
+              tenantId: tenant.id,
+            },
+          },
+          meta: { timestamp: new Date().toISOString(), version: "1.0" },
+        },
+        { accessToken: finalToken, refreshToken }
+      );
     }
 
     const appUrl =
@@ -104,22 +118,10 @@ export async function GET(request: NextRequest) {
             throw new Error("NEXT_PUBLIC_APP_URL must be set in production");
           })()
         : "http://localhost:3000");
-    const secure = secureCookieFlag();
-    const response = NextResponse.redirect(new URL("/dashboard", appUrl));
-    response.cookies.set("access_token", finalToken, {
-      httpOnly: true,
-      secure,
-      sameSite: "lax",
-      maxAge: 60 * 15,
+    return attachSessionCookies(NextResponse.redirect(new URL("/", appUrl)), {
+      accessToken: finalToken,
+      refreshToken,
     });
-    response.cookies.set("refresh_token", refreshToken, {
-      httpOnly: true,
-      secure,
-      sameSite: "strict",
-      path: "/api/v1/auth/refresh",
-      maxAge: 60 * 60 * 24 * 30,
-    });
-    return response;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
     if (["INVALID_TOKEN", "TOKEN_ALREADY_USED", "TOKEN_EXPIRED"].includes(msg)) {

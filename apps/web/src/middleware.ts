@@ -7,6 +7,8 @@ const PUBLIC_PATHS = new Set([
   "/",
   "/login",
   "/register",
+  "/new-trainer-offer",
+  "/trainer",
   "/api/v1/auth/login",
   "/api/v1/auth/register",
   "/api/v1/auth/refresh",
@@ -21,6 +23,10 @@ const PUBLIC_PATHS = new Set([
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
   if (pathname.startsWith("/invite/")) return true;
+  // Auth landing surfaces (verify code, magic-link click-through) need to
+  // run without a session — that's the whole point of them.
+  if (pathname.startsWith("/verify/")) return true;
+  if (pathname.startsWith("/auth/")) return true;
   if (pathname.startsWith("/api/v1/public/")) return true;
   if (pathname.startsWith("/_next/") || pathname.startsWith("/favicon")) return true;
   return false;

@@ -14,10 +14,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label
-            htmlFor={inputId}
-            className="block text-sm font-medium text-text-secondary"
-          >
+          <label htmlFor={inputId} className="block text-sm font-medium text-text-secondary">
             {label}
           </label>
         )}
@@ -47,21 +44,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             error
               ? "border-signal-danger focus-visible:ring-signal-danger"
               : "border-border focus-visible:ring",
-            className,
+            className
           )}
           ref={ref}
           aria-invalid={error ? "true" : undefined}
-          aria-describedby={
-            error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined
-          }
+          aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
           {...props}
         />
         {error && (
-          <p
-            id={`${inputId}-error`}
-            className="text-xs text-signal-danger"
-            role="alert"
-          >
+          <p id={`${inputId}-error`} className="text-xs text-signal-danger" role="alert">
             {error}
           </p>
         )}
@@ -72,7 +63,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
       </div>
     );
-  },
+  }
 );
 
 Input.displayName = "Input";
