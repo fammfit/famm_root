@@ -24,6 +24,15 @@ export interface TenantBrandingRecord {
   logoUrl: string | null;
   primaryColor: string;
   faviconUrl: string | null;
+  // Step 4 — Public Profile (TODO(profile-fields): real Prisma columns).
+  headline: string | null;
+  bioMd: string | null;
+  gallery: ReadonlyArray<string>;
+  socialInstagram: string | null;
+  socialTiktok: string | null;
+  socialYoutube: string | null;
+  socialWebsite: string | null;
+  specialties: ReadonlyArray<string>;
 }
 
 export interface TenantSettingsRecord {
@@ -48,9 +57,26 @@ export interface TenantBundle {
 
 export interface UpdateTenantInput {
   tenant?: Partial<
-    Pick<TenantRecord, "name" | "legalName" | "country" | "currency" | "locale" | "timezone">
+    Pick<
+      TenantRecord,
+      "name" | "legalName" | "slug" | "country" | "currency" | "locale" | "timezone"
+    >
   >;
-  branding?: Partial<Pick<TenantBrandingRecord, "logoUrl" | "primaryColor">>;
+  branding?: Partial<
+    Pick<
+      TenantBrandingRecord,
+      | "logoUrl"
+      | "primaryColor"
+      | "headline"
+      | "bioMd"
+      | "gallery"
+      | "socialInstagram"
+      | "socialTiktok"
+      | "socialYoutube"
+      | "socialWebsite"
+      | "specialties"
+    >
+  >;
   settings?: Partial<Omit<TenantSettingsRecord, "tenantId">>;
 }
 

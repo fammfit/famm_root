@@ -34,6 +34,11 @@ const UpdateSchema = z
       .object({
         name: z.string().trim().min(1).max(120).optional(),
         legalName: z.string().trim().max(200).nullable().optional(),
+        slug: z
+          .string()
+          .trim()
+          .regex(/^[a-z][a-z0-9-]{2,29}$/)
+          .optional(),
         country: z.string().length(2).optional(),
         currency: z.string().length(3).optional(),
         locale: z.string().min(2).max(15).optional(),
@@ -47,6 +52,14 @@ const UpdateSchema = z
           .string()
           .regex(/^#[0-9a-fA-F]{6}$/)
           .optional(),
+        headline: z.string().trim().max(80).nullable().optional(),
+        bioMd: z.string().trim().max(500).nullable().optional(),
+        gallery: z.array(z.string().url()).max(6).optional(),
+        socialInstagram: z.string().url().nullable().optional(),
+        socialTiktok: z.string().url().nullable().optional(),
+        socialYoutube: z.string().url().nullable().optional(),
+        socialWebsite: z.string().url().nullable().optional(),
+        specialties: z.array(z.string().trim().min(1).max(32)).max(6).optional(),
       })
       .optional(),
     settings: z

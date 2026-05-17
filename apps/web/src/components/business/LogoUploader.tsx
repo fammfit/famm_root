@@ -4,6 +4,7 @@ import * as React from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { Sheet, SheetHeader, SheetFooter, Button } from "@famm/ui";
 import { uploadLogo } from "@/lib/api/business";
+import { resizeImage } from "@/lib/uploads/resize-image";
 import { cn } from "@/lib/cn";
 
 export interface LogoUploaderProps {
@@ -141,25 +142,4 @@ export function LogoUploader({ value, onChange, initials, disabled }: LogoUpload
       </Sheet>
     </div>
   );
-}
-
-async function resizeImage(file: File, maxEdge: number): Promise<Blob> {
-  if (typeof createImageBitmap === "undefined") return file;
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
-  const width = Math.round(bitmap.width * scale);
-  const height = Math.round(bitmap.height * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  return new Promise<Blob>((resolve) => {
-    canvas.toBlob(
-      (blob) => resolve(blob ?? file),
-      file.type === "image/png" ? "image/png" : "image/jpeg",
-      0.9
-    );
-  });
 }

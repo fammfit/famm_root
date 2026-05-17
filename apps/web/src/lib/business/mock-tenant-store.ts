@@ -40,6 +40,14 @@ function seed(tenantId: string): TenantBundle {
     logoUrl: null,
     primaryColor: DEFAULT_PRIMARY_COLOR,
     faviconUrl: null,
+    headline: null,
+    bioMd: null,
+    gallery: [],
+    socialInstagram: null,
+    socialTiktok: null,
+    socialYoutube: null,
+    socialWebsite: null,
+    specialties: [],
   };
   const settings: TenantSettingsRecord = {
     tenantId,
@@ -81,4 +89,21 @@ export function updateBundle(tenantId: string, input: UpdateTenantInput): Tenant
   const next: TenantBundle = { tenant, branding, settings };
   STORE.set(tenantId, next);
   return next;
+}
+
+/**
+ * Slug uniqueness for the stub. Treats every claimed slug across all
+ * tenants in the store + a small demo set as "taken". The trainer's own
+ * current slug is always available to itself (callers filter that out).
+ */
+const MOCK_TAKEN_SLUGS: ReadonlySet<string> = new Set(["acme", "maya"]);
+
+export function isSlugTaken(slug: string, ownTenantId: string): boolean {
+  const normalized = slug.toLowerCase();
+  if (MOCK_TAKEN_SLUGS.has(normalized)) return true;
+  for (const [tenantId, bundle] of STORE.entries()) {
+    if (tenantId === ownTenantId) continue;
+    if (bundle.tenant.slug.toLowerCase() === normalized) return true;
+  }
+  return false;
 }

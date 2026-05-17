@@ -87,3 +87,28 @@ export async function uploadLogo(file: Blob): Promise<{ url: string }> {
   });
   return parse<{ url: string }>(res, "Couldn't upload that logo");
 }
+
+export interface SlugAvailability {
+  available: boolean;
+  reason?: "taken" | "reserved" | "invalid";
+}
+
+export async function checkSlugAvailability(slug: string): Promise<SlugAvailability> {
+  const res = await fetch(`/api/v1/tenants/slug-available?slug=${encodeURIComponent(slug)}`, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  return parse<SlugAvailability>(res, "Couldn't check that link");
+}
+
+export async function uploadPhoto(file: Blob): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append("file", file, "photo");
+  const res = await fetch("/api/v1/uploads/photo", {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  return parse<{ url: string }>(res, "Couldn't upload that photo");
+}
