@@ -58,3 +58,38 @@ export type ImportBusinessStepData =
       provider: "manual";
       skippedAt: string;
     };
+
+// ── Google Calendar ─────────────────────────────────────────────────────
+
+export type GoogleCalendarAccessRole = "OWNER" | "WRITER" | "READER" | "FREE_BUSY_READER";
+
+export interface GoogleCalendar {
+  id: string;
+  summary: string;
+  description?: string;
+  /** Calendar's color in #RRGGBB. Data only — rendered as a small swatch. */
+  colorHex: string;
+  isPrimary: boolean;
+  isSubscribed: boolean;
+  accessRole: GoogleCalendarAccessRole;
+  timezone: string;
+}
+
+export interface GoogleCalendarSyncSettings {
+  readCalendarIds: ReadonlyArray<string>;
+  /** May be `"create_new"` before the PATCH resolves it to a real id. */
+  writeCalendarId: string | null;
+}
+
+export type ConnectCalendarStepData =
+  | {
+      provider: "google";
+      account: { id: string; email: string };
+      readCalendarIds: ReadonlyArray<string>;
+      writeCalendarId: string;
+      connectedAt: string;
+    }
+  | {
+      provider: "skipped";
+      skippedAt: string;
+    };
