@@ -34,3 +34,166 @@
     opacity: 1;
   }
 }
+
+/* -------------------------------------------------------------------
+ * Section entrance — used on major page sections only (header, hero,
+ * dashboard bands). Pre-animation state lives in the CSS so the page
+ * stays usable if JS fails: with no `.is-mounted` class on <html>,
+ * sections remain at `opacity: 1; transform: none` (the post-animation
+ * state), so SSR-rendered content is visible immediately. Layout
+ * marks `<html class="is-mounted">` after hydration, which un-hides
+ * `.section-enter` to its `from` state and then runs the keyframe.
+ * That sequencing avoids FOUC and guarantees content is readable for
+ * users without JS or with `prefers-reduced-motion`.
+ * ------------------------------------------------------------------- */
+
+@keyframes sectionEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer components {
+  /* Default: visible. JS-free fallback and reduced-motion state. */
+  .section-enter {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Only after hydration AND with motion enabled do we replay the
+     entrance. Stagger by index — keep it tight, max 5 children. */
+  html.is-mounted .section-enter {
+    animation: sectionEnter 480ms cubic-bezier(0.2, 0, 0, 1) both;
+  }
+  html.is-mounted .section-enter[data-stagger="1"] { animation-delay: 60ms;  }
+  html.is-mounted .section-enter[data-stagger="2"] { animation-delay: 120ms; }
+  html.is-mounted .section-enter[data-stagger="3"] { animation-delay: 180ms; }
+  html.is-mounted .section-enter[data-stagger="4"] { animation-delay: 240ms; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.is-mounted .section-enter,
+    html.is-mounted .section-enter[data-stagger] {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* -------------------------------------------------------------------
+ * Icon micro-interactions — utility classes for lucide-react icons
+ * placed inside interactive elements (Buttons, links, accordion
+ * triggers, etc.). Apply ONLY to icons that aid user understanding;
+ * decorative icons stay static. All effects gate on motion-safe so
+ * `prefers-reduced-motion` users see no movement.
+ * Motion budgets per spec: ≤ 8° rotation, ≤ 4px translation,
+ * 150–250ms timing.
+ * ------------------------------------------------------------------- */
+
+@layer components {
+  /* Shifts an arrow icon ~3px to the right on parent hover/focus. */
+  .icon-hover-shift-right {
+    transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+    will-change: transform;
+  }
+  .group:hover .icon-hover-shift-right,
+  .group:focus-visible .icon-hover-shift-right,
+  *:hover > .icon-hover-shift-right,
+  *:focus-visible > .icon-hover-shift-right {
+    transform: translateX(3px);
+  }
+
+  /* Rotates a chevron 180° when the parent has aria-expanded="true"
+     or data-state="open". Use on Accordion / Disclosure triggers. */
+  .icon-rotate-open {
+    transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+    will-change: transform;
+  }
+  [aria-expanded="true"] .icon-rotate-open,
+  [data-state="open"] .icon-rotate-open {
+    transform: rotate(180deg);
+  }
+
+  /* Rotates a plus icon 45° (to look like an X) when expanded.
+     Lighter than 180° so the underlying glyph still reads. */
+  .icon-rotate-toggle {
+    transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+    will-change: transform;
+  }
+  [aria-expanded="true"] .icon-rotate-toggle,
+  [data-state="open"] .icon-rotate-toggle {
+    transform: rotate(45deg);
+  }
+
+  /* A press-scale on icon-only buttons. Under the 4px budget at typical
+     24px icon sizes. */
+  .icon-press-scale {
+    transition: transform 150ms cubic-bezier(0.2, 0, 0, 1);
+    will-change: transform;
+  }
+  *:active > .icon-press-scale {
+    transform: scale(0.92);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .icon-hover-shift-right,
+    .icon-rotate-open,
+    .icon-rotate-toggle,
+    .icon-press-scale {
+      transition: none;
+    }
+    .group:hover .icon-hover-shift-right,
+    .group:focus-visible .icon-hover-shift-right,
+    *:hover > .icon-hover-shift-right,
+    *:focus-visible > .icon-hover-shift-right,
+    [aria-expanded="true"] .icon-rotate-open,
+    [data-state="open"] .icon-rotate-open,
+    [aria-expanded="true"] .icon-rotate-toggle,
+    [data-state="open"] .icon-rotate-toggle,
+    *:active > .icon-press-scale {
+      transform: none;
+    }
+  }
+}
+
+/* -------------------------------------------------------------------
+ * Accordion content reveal — opacity-and-spacing transition (not a
+ * raw height animation, which janks during reflow). The trigger
+ * carries `aria-expanded` and `data-state`. ARIA attributes always
+ * reflect truth regardless of animation state, so screen readers see
+ * the same content whether motion is enabled or not.
+ * ------------------------------------------------------------------- */
+
+@layer components {
+  .accordion-panel {
+    overflow: hidden;
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    transition:
+      opacity 200ms cubic-bezier(0.2, 0, 0, 1),
+      max-height 220ms cubic-bezier(0.2, 0, 0, 1),
+      padding 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  [data-state="open"] > .accordion-panel,
+  .accordion-panel[data-state="open"] {
+    opacity: 1;
+    /* Generous ceiling for typical FAQ-shaped content. For very tall
+       panels, drive max-height from JS measurement. */
+    max-height: 60rem;
+    padding-top: 0;
+    padding-bottom: var(--space-inset-md, 1rem);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .accordion-panel {
+      transition: none;
+    }
+  }
+}

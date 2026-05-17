@@ -32,7 +32,9 @@ export default async function DashboardPage() {
       id="dashboard-main"
       className="mx-auto flex w-full max-w-6xl flex-col gap-stack-lg p-inset-md md:p-inset-lg"
     >
-      <GreetingStrip date={data.date} firstName={data.user.firstName} />
+      <div className="section-enter">
+        <GreetingStrip date={data.date} firstName={data.user.firstName} />
+      </div>
 
       {data.state === "loading" && <DashboardSkeleton />}
       {data.state === "error" && <DashboardError />}
@@ -43,7 +45,8 @@ export default async function DashboardPage() {
           <section
             aria-labelledby="next-up-heading"
             aria-live="polite"
-            className="grid grid-cols-1 gap-stack-md md:grid-cols-3"
+            data-stagger="1"
+            className="section-enter grid grid-cols-1 gap-stack-md md:grid-cols-3"
           >
             <h2 id="next-up-heading" className="sr-only">
               Next up
@@ -54,9 +57,10 @@ export default async function DashboardPage() {
 
           <section
             aria-labelledby="activity-heading"
-            className="flex flex-col gap-stack-sm"
+            data-stagger="2"
+            className="section-enter flex flex-col gap-stack-sm"
           >
-            <header className="flex items-baseline justify-between">
+            <header className="group flex items-baseline justify-between">
               <h2
                 id="activity-heading"
                 className="text-lg font-semibold text-text-primary"
@@ -65,9 +69,10 @@ export default async function DashboardPage() {
               </h2>
               <Link
                 href="/history"
-                className="text-sm font-medium text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:underline"
+                className="inline-flex items-center gap-inline-xs text-sm font-medium text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:underline"
               >
                 See all
+                <span aria-hidden="true" className="icon-hover-shift-right">→</span>
               </Link>
             </header>
             <ActivityFeed activity={data.activity} />
@@ -75,7 +80,8 @@ export default async function DashboardPage() {
 
           <section
             aria-labelledby="shortcuts-heading"
-            className="flex flex-col gap-stack-sm"
+            data-stagger="3"
+            className="section-enter flex flex-col gap-stack-sm"
           >
             <h2
               id="shortcuts-heading"
