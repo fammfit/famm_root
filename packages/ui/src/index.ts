@@ -21,6 +21,14 @@ export type { BadgeProps } from "./components/primitives/badge";
 
 export { Spinner } from "./components/primitives/spinner";
 
+export { Accordion } from "./components/primitives/accordion";
+export type {
+  AccordionProps,
+  AccordionItemProps,
+  AccordionTriggerProps,
+  AccordionPanelProps,
+} from "./components/primitives/accordion";
+
 // Patterns (L2)
 export { FormField } from "./components/patterns/form-field";
 export type { FormFieldProps } from "./components/patterns/form-field";

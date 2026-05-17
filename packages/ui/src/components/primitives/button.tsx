@@ -3,22 +3,31 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-control text-sm font-medium transition-colors duration-fast ease-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:pointer-events-none disabled:opacity-50",
+  // Base — transitions cover colors, shadow, and transform so hover /
+  // active feel cohesive. The transform is gated on `motion-safe:` so
+  // it collapses to no movement under `prefers-reduced-motion: reduce`
+  // (the transition itself remains, so color/shadow still cross-fade).
+  // Disabled buttons can't fire :hover because of pointer-events-none,
+  // so the lift naturally suppresses there too.
+  "inline-flex items-center justify-center rounded-control text-sm font-medium " +
+    "transition duration-base ease-standard " +
+    "motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface " +
+    "disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default:
-          "bg-accent text-onAccent hover:bg-accent-hover focus-visible:ring",
+        default: "bg-accent text-onAccent hover:bg-accent-hover hover:shadow-sm focus-visible:ring",
         destructive:
-          "bg-signal-danger text-onAccent hover:opacity-90 focus-visible:ring-signal-danger",
+          "bg-signal-danger text-onAccent hover:opacity-90 hover:shadow-sm focus-visible:ring-signal-danger",
         outline:
-          "border border-border bg-surface text-text-primary hover:bg-surface-sunken focus-visible:ring",
-        ghost:
-          "text-text-secondary hover:bg-surface-sunken hover:text-text-primary",
-        link:
-          "text-accent underline-offset-4 hover:underline focus-visible:ring",
+          "border border-border bg-surface text-text-primary hover:bg-surface-sunken hover:shadow-sm focus-visible:ring",
+        ghost: "text-text-secondary hover:bg-surface-sunken hover:text-text-primary",
+        // Link is text-shaped; suppress the lift via tailwind-merge
+        // (this `translate-y-0` overrides the base `-translate-y-px`).
+        link: "text-accent underline-offset-4 hover:underline motion-safe:hover:translate-y-0 focus-visible:ring",
         secondary:
-          "bg-surface-sunken text-text-primary hover:bg-accent-subtle focus-visible:ring",
+          "bg-surface-sunken text-text-primary hover:bg-accent-subtle hover:shadow-sm focus-visible:ring",
       },
       size: {
         sm: "h-8 px-inset-sm text-xs",
@@ -29,12 +38,11 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: { variant: "default", size: "md" },
-  },
+  }
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   loading?: boolean;
 }
 
@@ -44,36 +52,27 @@ function warnButtonContract(props: ButtonProps): void {
   if (variant === "destructive" && size === "sm") {
     console.warn(
       '[@famm/ui Button] variant="destructive" + size="sm" is forbidden by spec ' +
-        "(docs/design-system/components/button.md §2). Use size=\"md\" or larger.",
+        '(docs/design-system/components/button.md §2). Use size="md" or larger.'
     );
   }
   if (variant === "link" && size === "icon") {
     console.warn(
       '[@famm/ui Button] variant="link" + size="icon" is forbidden by spec ' +
-        "(docs/design-system/components/button.md §2).",
+        "(docs/design-system/components/button.md §2)."
     );
   }
   if (size === "icon" && !ariaLabel && !ariaLabelledBy) {
     console.warn(
       '[@famm/ui Button] size="icon" requires aria-label or aria-labelledby ' +
-        "(docs/design-system/components/button.md §6).",
+        "(docs/design-system/components/button.md §6)."
     );
   }
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    {
-      className,
-      variant,
-      size,
-      loading = false,
-      type = "button",
-      children,
-      disabled,
-      ...props
-    },
-    ref,
+    { className, variant, size, loading = false, type = "button", children, disabled, ...props },
+    ref
   ) => {
     warnButtonContract({ variant, size, ...props });
     return (
@@ -96,14 +95,25 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             viewBox="0 0 24 24"
             aria-hidden="true"
           >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
           </svg>
         )}
         {children}
       </button>
     );
-  },
+  }
 );
 
 Button.displayName = "Button";

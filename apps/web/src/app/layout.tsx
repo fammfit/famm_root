@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "@famm/ui/tokens.css";
 import "./globals.css";
 import { AppProviders } from "@/providers/AppProviders";
+import { MountedRoot } from "../components/mounted-root";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${inter.variable} bg-surface font-sans text-text-primary antialiased`}>
+        <MountedRoot />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
