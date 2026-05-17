@@ -20,9 +20,11 @@
  * Route: /dashboard (trainer-only — gated by (trainer)/layout.tsx).
  */
 
+import { Suspense } from "react";
 import { AppBar } from "@/components/nav/AppBar";
 import { TrainerDashboard } from "@/components/dashboard/TrainerDashboard";
 import { getTrainerDashboardData } from "@/components/dashboard/trainer-dashboard-data";
+import { WelcomeTutorialModal } from "@/components/onboarding/WelcomeTutorialModal";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,9 @@ export default async function TrainerDashboardPage() {
     <>
       <AppBar title="Today" subtitle="Your day at a glance" />
       <TrainerDashboard data={data} />
+      <Suspense fallback={null}>
+        <WelcomeTutorialModal />
+      </Suspense>
     </>
   );
 }
